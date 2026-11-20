@@ -1,6 +1,6 @@
 /* ===== EDIT YOUR CONTENT HERE (everything marked REPLACE) ===== */
 const PLACEHOLDER_ID = ""; // empty = project shows "Coming Soon" (no video is ever loaded)
-const P = (title, cat, type, desc, dur, youtubeId = PLACEHOLDER_ID, thumb = "") => ({ title, cat, type, desc, dur, youtubeId, thumb });
+const P = (title, cat, type, dur, src = "", thumb = "") => { const f = src.startsWith("videos/"); return { title, cat, type, dur, thumb, file: f ? src : "", youtubeId: f ? "" : src }; };
 const CONFIG = {
   contact: {
     discord: "Pegasus2912",       // Discord username. Discord has no public link for usernames, so the button copies it.
@@ -13,29 +13,28 @@ const CONFIG = {
     ["Short-Form Content", ["YouTube Shorts","TikTok videos","Vertical 9:16 editing","Captions and subtitles","Engaging cuts","Attention-grabbing openings","Sound effects and music"]],
     ["Gaming Video Editing", ["Valorant gameplay","Minecraft gameplay","Gaming highlights","Funny moments","Compilation videos","Entertaining gaming content"]],
   ],
-  // ADD / REPLACE A VIDEO: edit one line. Arguments: title, game, type, description, duration, YouTube ID, optional thumbnail.
-  // Example: P("My Ace Short","Valorant","Shorts","Fast cuts + captions","0:45","AbC123xyz_9")
-  // With a real YouTube ID the thumbnail loads automatically. Custom thumbnail: add "img/mine.jpg" as 7th argument.
-  // game: "Valorant" | "Minecraft"    type: "Shorts" | "Long-Form Videos"
+  // VIDEOS, shown in this order. P(title, game, type, duration, source, optionalThumbnail)
+  // game: "Valorant" | "Minecraft" | "Other"   type: "Short" (vertical) | "Video" (16:9)
+  // source: 11-character YouTube ID, or a local file such as "videos/clip.mp4" (then add a poster image as 6th argument).
+  // Empty source = "Coming Soon". YouTube thumbnails load from i.ytimg.com unless you set your own.
   projects: [
-    P("Valorant Clutch Montage (Placeholder)","Valorant","Long-Form Videos","Placeholder: replace with your best Valorant edit.","8:24"),
-    P("Ranked Highlights (Placeholder)","Valorant","Long-Form Videos","Placeholder: highlights with clean pacing.","12:10"),
-    P("Valorant Ace Short (Placeholder)","Valorant","Shorts","Placeholder: vertical short with animated captions.","0:42"),
-    P("1v5 Clip Short (Placeholder)","Valorant","Shorts","Placeholder: hook-first short with sound effects.","0:35"),
-    P("Minecraft Funny Moments (Placeholder)","Minecraft","Long-Form Videos","Placeholder: replace with your Minecraft edit.","9:05"),
-    P("Minecraft Compilation (Placeholder)","Minecraft","Long-Form Videos","Placeholder: best moments compilation.","14:30"),
-    P("Minecraft Speedrun Short (Placeholder)","Minecraft","Shorts","Placeholder: fast-paced short.","0:50"),
-    P("Build Reveal Short (Placeholder)","Minecraft","Shorts","Placeholder: satisfying reveal edit.","0:28"),
+    P("Valorant Montage Short", "Valorant", "Short", "", "7B44hmiakzg"),
+    P("Valorant Montage Short", "Valorant", "Short", "", "JgmB7NDMo60"),
+    P("Minecraft Server Advertisement Short", "Minecraft", "Short", "", "NKDW2TMC3wQ"),
+    P("Minecraft Cheater Caught Short", "Minecraft", "Short", "", "wkA3Ethj0Mo"),
+    P("Discord Bot Advertisement Short", "Other", "Short", "0:20", "videos/discord-bot-ad.mp4", "img/discord-bot-ad-poster.jpg"),
+    P("Minecraft Trailer (1 Minute)", "Minecraft", "Video", "1:00", "xJP4jjOpkiQ"),
+    P("Minecraft Long-Form Video", "Minecraft", "Video", "", "wGCyaZ7YLY0"),
   ],
   pricesShort: [
-    {name:"Basic Short", price:5, items:["Basic cuts","Simple subtitles","Basic sound effects"]},
-    {name:"Advanced Short", price:10, items:["More detailed editing","Animated captions","Sound effects","Better pacing"], hot:true},
-    {name:"Premium Short", price:15, items:["Detailed editing","Advanced captions","More effects","Polished final result"]},
+    {id:"short-basic",name:"Basic Short", price:5, items:["Basic cuts","Simple subtitles","Basic sound effects"]},
+    {id:"short-advanced",name:"Advanced Short", price:10, items:["More detailed editing","Animated captions","Sound effects","Better pacing"], hot:true},
+    {id:"short-premium",name:"Premium Short", price:15, items:["Detailed editing","Advanced captions","More effects","Polished final result"]},
   ],
   pricesLong: [
-    {name:"Basic Video", price:15, items:["Up to 5 minutes","Basic cuts","Simple editing"]},
-    {name:"Standard Video", price:25, items:["5–10 minutes","More detailed editing","Sound effects","Background music","Better pacing"], hot:true},
-    {name:"Premium Video", price:40, items:["10–20 minutes","Detailed editing","Advanced cuts","Sound effects","More polished editing"]},
+    {id:"long-basic",name:"Basic Video", price:15, items:["Up to 5 minutes","Basic cuts","Simple editing"]},
+    {id:"long-standard",name:"Standard Video", price:25, items:["5–10 minutes","More detailed editing","Sound effects","Background music","Better pacing"], hot:true},
+    {id:"long-premium",name:"Premium Video", price:40, items:["10–20 minutes","Detailed editing","Advanced cuts","Sound effects","More polished editing"]},
   ],
   why: [
     ["🎯","Focus on Valorant & Minecraft","I know these games, their pacing and what their audiences enjoy."],
@@ -60,11 +59,12 @@ const safeUrl = (u) => { try { const x = new URL(u); return x.protocol === "http
 const goContact = () => { const a = el("a", "btn ghost", "Contact Me"); a.href = "#contact"; return a; };
 
 function list(items) { const ul = el("ul"); items.forEach((i) => ul.append(el("li", null, i))); return ul; }
+function orderBtn(id) { const b = el("button", "btn", "Order Now"); b.type = "button"; b.addEventListener("click", () => openOrder(id)); return b; }
 function priceCard(p) {
   const c = el("article", "card pc" + (p.hot ? " hot" : ""));
   if (p.hot) c.append(el("span", "tag", "POPULAR"));
   c.append(el("h3", null, p.name));
-  const pr = el("div", "price", "€" + p.price); pr.append(el("small", null, " starting")); c.append(pr, list(p.items), goContact());
+  c.append(el("div", "price", "€" + p.price), list(p.items), orderBtn(p.id));
   return c;
 }
 CONFIG.services.forEach(([t, i]) => { const c = el("article", "card rv"); c.append(el("h3", null, t), list(i)); $("#services-grid").append(c); });
@@ -80,25 +80,25 @@ CONFIG.why.forEach(([i, t, d]) => { const c = el("article", "card rv"); c.append
 CONFIG.steps.forEach(([i, t, d], n) => { const li = el("li", "rv"); li.append(el("div", "ic", i), el("h3", null, `${n + 1}. ${t}`), el("p", null, d)); $("#steps").append(li); });
 
 /* Portfolio */
-const cats = ["All Projects", "Valorant", "Minecraft", "Shorts", "Long-Form Videos"], gal = $("#gallery");
-let active = "All Projects";
-const match = (p, c) => c === "All Projects" || p.cat === c || p.type === c;
+const cats = ["All", "Valorant", "Minecraft", "Other"], gal = $("#gallery");
+let active = "All";
+const match = (p, c) => c === "All" || p.cat === c;
+const isYT = (id) => /^[\w-]{11}$/.test(id);
 function renderGallery() {
   gal.replaceChildren();
   const list = CONFIG.projects.filter((p) => match(p, active));
   $("#gstat").textContent = `Showing ${list.length} project${list.length === 1 ? "" : "s"}: ${active}`;
   list.forEach((p) => {
-    const card = el("article", "proj"), b = el("button", "thumb");
-    const ok = /^[\w-]{11}$/.test(p.youtubeId);
+    const vert = p.type === "Short", ok = !!p.file || isYT(p.youtubeId);
+    const card = el("article", "proj " + (vert ? "vert" : "wide")), b = el("button", "thumb");
     b.type = "button"; b.setAttribute("aria-label", (ok ? "Play " : "Coming soon: ") + p.title);
-    const src = p.thumb || (ok && p.youtubeId !== PLACEHOLDER_ID ? `https://i.ytimg.com/vi/${p.youtubeId}/hqdefault.jpg` : "");
-    if (src) { const im = el("img"); im.src = src; im.alt = ""; im.loading = "lazy"; b.append(im); }
-    else { b.classList.add("t-" + p.cat.toLowerCase()); b.append(el("span", "gw", p.cat), el("span", "ph", "PLACEHOLDER")); }
-    b.append(el("span", "badge", p.type === "Shorts" ? "9:16 SHORT" : "LONG-FORM"));
+    const src = p.thumb || (isYT(p.youtubeId) ? `https://i.ytimg.com/vi/${p.youtubeId}/hqdefault.jpg` : "");
+    const fallback = () => { b.classList.add("t-" + p.cat.toLowerCase()); b.prepend(el("span", "gw", p.cat)); };
+    if (src) { const im = el("img"); im.alt = ""; im.loading = "lazy"; im.addEventListener("error", () => { im.remove(); fallback(); }, { once: true }); im.src = src; b.append(im); } else fallback();
+    b.append(el("span", "badge", vert ? "SHORT" : "VIDEO"));
     if (p.dur) b.append(el("span", "dur", p.dur));
-    b.append(el("span", "play", "▶"), el("span", "watch", ok ? "Watch project" : "Coming soon"));
-    b.addEventListener("click", () => openModal(p));
-    const body = el("div", "pb"); body.append(el("span", "cat", p.cat + " · " + p.type), el("h3", null, p.title), el("p", null, p.desc));
+    b.append(el("span", "play", "▶")); b.addEventListener("click", () => openModal(p));
+    const body = el("div", "pb"); body.append(el("span", "cat", p.cat + " · " + p.type), el("h3", null, p.title));
     card.append(b, body); gal.append(card);
   });
 }
@@ -119,11 +119,12 @@ const modal = $("#modal"); let lastFocus;
 const setInert = (on) => ["#main", "#nav", ".foot", "#top-btn"].forEach((s) => { const n = $(s); if (n) on ? n.setAttribute("inert", "") : n.removeAttribute("inert"); });
 function openModal(p) {
   lastFocus = document.activeElement; $("#m-title").textContent = p.title;
-  const box = $("#m-vid"), ok = /^[\w-]{11}$/.test(p.youtubeId);
-  box.classList.toggle("soon", !ok);
-  if (ok) {
+  const box = $("#m-vid"), yt = isYT(p.youtubeId), vert = p.type === "Short";
+  box.classList.toggle("soon", !yt && !p.file); box.classList.toggle("v", vert); $(".m-box").classList.toggle("v", vert);
+  if (p.file) { const v = el("video"); v.src = p.file; v.controls = true; v.autoplay = true; v.playsInline = true; if (p.thumb) v.poster = p.thumb; v.setAttribute("controlslist", "nodownload"); box.replaceChildren(v); }
+  else if (yt) {
     const f = el("iframe"); f.src = `https://www.youtube-nocookie.com/embed/${p.youtubeId}?autoplay=1&rel=0`;
-    f.title = p.title; f.allow = "autoplay; encrypted-media; picture-in-picture"; f.allowFullscreen = true; f.referrerPolicy = "strict-origin-when-cross-origin";
+    f.title = p.title; f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen"; f.allowFullscreen = true; f.referrerPolicy = "strict-origin-when-cross-origin";
     box.replaceChildren(f);
   } else { const d = el("div", "soon-in"); d.append(el("p", "soon-t", "Coming Soon"), el("p", null, "This project video will be added soon.")); box.replaceChildren(d); }
   setInert(true); document.body.classList.add("lock"); modal.hidden = false; $("#m-x").focus();
@@ -197,3 +198,64 @@ addEventListener("pointermove", (e) => { root.style.setProperty("--gx", e.client
 
 /* Escape closes the mobile menu and returns focus to the burger */
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.classList.contains("open")) { menu.classList.remove("open"); burger.setAttribute("aria-expanded", "false"); burger.focus(); } });
+
+/* ===== Order wizard: service -> package -> project details -> review & pay (Stripe Checkout) ===== */
+const ALLPK = [...CONFIG.pricesShort.map((p) => ({ ...p, service: "short" })), ...CONFIG.pricesLong.map((p) => ({ ...p, service: "long" }))];
+const SVC = { short: "Short-Form Editing", long: "Long-Form Editing" };
+const FIELDS = [["name", "Your name", "text", 1, 80], ["email", "Email address", "email", 1, 254], ["videoType", "Video type", "select", ["Gameplay edit", "Highlights", "Montage", "Trailer", "Advertisement", "Other"]], ["length", "Desired video length (e.g. 45 seconds)", "text", 1, 40], ["game", "Game", "select", ["Valorant", "Minecraft", "Other"]], ["refs", "Reference videos or links (https only, one per line, optional)", "textarea", 0, 1000], ["prefs", "Editing preferences (style, music, pacing; optional)", "textarea", 0, 1000], ["subs", "Subtitles / language", "select", ["No subtitles", "German", "English", "German & English"]], ["notes", "Describe exactly what you want (German or English)", "textarea big", 1, 4000]];
+const ow = el("div", "modal order"); ow.hidden = true; ow.setAttribute("role", "dialog"); ow.setAttribute("aria-modal", "true"); ow.setAttribute("aria-labelledby", "o-title");
+const ob = el("div", "o-box"); ow.append(ob); document.body.append(ow);
+let ord = {}, step = 1, oLast;
+const pk = () => ALLPK.find((p) => p.id === ord.packageId);
+const back = (s) => { const b = el("button", "btn ghost", "← Back"); b.type = "button"; b.addEventListener("click", () => { step = s; draw(); }); return b; };
+function openOrder(id) { oLast = document.activeElement; ord = id ? { packageId: id, service: id.split("-")[0] } : {}; step = id ? 3 : 1; setInert(true); document.body.classList.add("lock"); ow.hidden = false; draw(); }
+function closeOrder() { ow.hidden = true; setInert(false); document.body.classList.remove("lock"); if (oLast) oLast.focus(); }
+function draw() {
+  ob.replaceChildren(); ob.scrollTop = 0;
+  const top = el("div", "o-top"), x = el("button", "m-x o-x", "×"); x.type = "button"; x.setAttribute("aria-label", "Close order"); x.addEventListener("click", closeOrder);
+  top.append(el("span", "muted", `Step ${step} of 4`), x);
+  const t = el("h2", null, ["", "Choose a service", "Choose a package", "Your project", "Review & pay"][step]); t.id = "o-title"; t.tabIndex = -1; ob.append(top, t);
+  if (step === 1) { const g = el("div", "o-choices"); Object.entries(SVC).forEach(([k, v]) => { const b = el("button", "o-choice", v); b.type = "button"; b.addEventListener("click", () => { ord.service = k; step = 2; draw(); }); g.append(b); }); ob.append(g); }
+  if (step === 2) { const g = el("div", "o-choices"); ALLPK.filter((p) => p.service === ord.service).forEach((p) => { const b = el("button", "o-choice"); b.type = "button"; b.append(el("strong", null, p.name), el("span", null, "€" + p.price), el("small", null, p.items.join(" · "))); b.addEventListener("click", () => { ord.packageId = p.id; step = 3; draw(); }); g.append(b); }); ob.append(g, back(1)); }
+  if (step === 3) {
+    const f = el("form", "o-form"); f.append(el("p", "o-pk", `${SVC[pk().service]} · ${pk().name} · €${pk().price}`));
+    FIELDS.forEach(([n, l, k, a, b]) => {
+      const w = el("label", "o-f"); w.append(el("span", null, l)); let i;
+      if (k === "select") { i = el("select"); a.forEach((o) => { const op = el("option", null, o); op.value = o; i.append(op); }); }
+      else { i = k.startsWith("textarea") ? el("textarea", k.includes("big") ? "big" : "") : el("input"); if (i.tagName === "INPUT") i.type = k; else i.rows = k.includes("big") ? 8 : 3; i.maxLength = b; i.required = !!a; i.minLength = n === "notes" ? 10 : n === "name" ? 2 : 0; }
+      i.name = n; if (ord[n]) i.value = ord[n]; w.append(i); f.append(w);
+    });
+    const cw = el("label", "o-c"), cb = el("input"); cb.type = "checkbox"; cb.name = "consent"; cb.required = true; cb.checked = !!ord.consent;
+    const pl = el("a", null, "Privacy Policy"); pl.href = "legal.html#privacy"; pl.target = "_blank"; pl.rel = "noopener";
+    cw.append(cb, document.createTextNode(" I have read the "), pl, document.createTextNode(" and agree that my details are used to process my order."));
+    const nx = el("button", "btn", "Review order →"); nx.type = "submit"; const row = el("div", "row"); row.append(back(2), nx); f.append(cw, row);
+    f.addEventListener("submit", (e) => { e.preventDefault(); FIELDS.forEach(([n]) => { ord[n] = f.elements.namedItem(n).value.trim(); }); ord.consent = cb.checked; step = 4; draw(); });
+    ob.append(f);
+  }
+  if (step === 4) {
+    const p = pk(), l = el("dl", "o-sum");
+    [["Service", SVC[p.service]], ["Package", p.name], ["Name", ord.name], ["Email", ord.email], ["Video type", ord.videoType], ["Length", ord.length], ["Game", ord.game], ["Subtitles", ord.subs], ["References", ord.refs || "–"], ["Preferences", ord.prefs || "–"], ["Instructions", ord.notes]].forEach(([k, v]) => { const d = el("div"); d.append(el("dt", null, k), el("dd", null, v)); l.append(d); });
+    const msg = el("p", "muted"); msg.setAttribute("role", "status");
+    const pay = el("button", "btn", "Pay securely with Stripe"); pay.type = "button"; pay.addEventListener("click", () => checkout(pay, msg));
+    const row = el("div", "row"); row.append(back(3), pay);
+    ob.append(l, el("p", "o-tot", "Total: €" + p.price), row, msg, el("p", "muted small", "Payment is handled by Stripe. Card details never reach this website."));
+  }
+  t.focus();
+}
+async function checkout(btn, msg) {
+  btn.disabled = true; msg.textContent = "Connecting to secure checkout…";
+  const body = {}; ["packageId", "name", "email", "videoType", "length", "game", "refs", "prefs", "subs", "notes", "consent"].forEach((k) => { body[k] = ord[k]; });
+  try {
+    const r = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && typeof d.url === "string" && d.url.startsWith("https://checkout.stripe.com/")) { location.assign(d.url); return; }
+    msg.textContent = d.error || "Online ordering is not available right now. Please contact me by email.";
+  } catch { msg.textContent = "Online ordering is not available right now. Please contact me by email."; }
+  btn.disabled = false;
+}
+document.addEventListener("keydown", (e) => {
+  if (ow.hidden) return;
+  if (e.key === "Escape") return closeOrder();
+  if (e.key === "Tab") { const f = [...ow.querySelectorAll("button,input,select,textarea,a[href]")].filter((n) => !n.disabled), i = f.indexOf(document.activeElement);
+    if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
+});
