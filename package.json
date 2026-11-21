@@ -2,12 +2,13 @@
   "name": "pegasus2912-site",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "audit": "npm audit",
     "check": "node scripts/check-assets.js",
-    "verify": "node scripts/verify-deploy.js"
+    "verify": "node scripts/verify-deploy.js",
+    "dev": "node scripts/dev-server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

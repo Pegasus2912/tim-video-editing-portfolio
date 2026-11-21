@@ -53,7 +53,7 @@ const CONFIG = {
   ],
 };
 /* ===== END CONFIG ===== */
-// Content saved in the admin panel (loaded from /api/content.js) overrides the defaults above.
+// Content saved in the admin panel (loaded from /api/content) overrides the defaults above.
 (function () {
   const X = window.__CONTENT; if (!X) return; const de = window.I18N && I18N.lang === "de";
   if (Array.isArray(X.packages)) { const act = X.packages.filter((p) => p.active), m = (s) => act.filter((p) => p.service === s).map((p) => ({ id: p.id, name: (de && p.name_de) || p.name, price: p.price, items: de && p.items_de && p.items_de.length ? p.items_de : p.items, hot: p.hot })); CONFIG.pricesShort = m("short"); CONFIG.pricesLong = m("long"); }

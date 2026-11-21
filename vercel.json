@@ -34,5 +34,28 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/content.js",
+      "destination": "/api/content"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/SETUP.md",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/supabase/:path*",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/scripts/:path*",
+      "destination": "/",
+      "permanent": false
+    }
   ]
 }

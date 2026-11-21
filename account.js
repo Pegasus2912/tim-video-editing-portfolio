@@ -1,6 +1,13 @@
 const $ = (s) => document.querySelector(s), app = $("#app");
 const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = T(x); return n; };
-const post = async (body) => { const r = await fetch("/api/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { r, d: await r.json().catch(() => ({})) }; };
+const post = async (body) => {
+  let r; try { r = await fetch("/api/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); }
+  catch (e) { console.error("Network error calling /api/account:", e); return { r: { ok: false, status: 0 }, d: { error: "Network error. Please check your connection and try again.", code: "NETWORK" } }; }
+  const text = await r.text(); let d = null; try { d = JSON.parse(text); } catch {}
+  if (!d || typeof d !== "object") { console.error("Unexpected (non-JSON) response from /api/account: HTTP", r.status, text.slice(0, 200), "-> open /api/health to diagnose"); d = { error: r.status === 404 ? "Registration is temporarily unavailable. Please try again later." : "The server is not responding correctly. Please try again later.", code: "BAD_RESPONSE" }; }
+  if (!r.ok && !d.error) d.error = "Something went wrong. Please try again later.";
+  return { r, d };
+};
 const val = (f, n) => f.elements.namedItem(n).value;
 const fld = (l, type, name, x = {}) => { const w = el("label", "o-f"), i = el("input"); i.type = type; i.name = name; i.required = true; Object.assign(i, x); w.append(el("span", null, l), i); return w; };
 const form = (fields, btn, fn) => { const f = el("form", "o-form"), m = el("p", "muted"); m.setAttribute("role", "status"); f.append(...fields, el("button", "btn", btn), m); f.addEventListener("submit", async (e) => { e.preventDefault(); m.textContent = ""; const x = await fn(f); if (x) m.textContent = T(x); }); return f; };
@@ -13,10 +20,13 @@ function auth(msg, tab = "login") {
   const m = el("p", "muted", msg || ""); m.setAttribute("role", "status"); let f;
   if (tab === "login") {
     f = form([fld("Email address", "email", "email", { autocomplete: "email" }), fld("Password", "password", "password", { autocomplete: "current-password" })], "Log in", async (f) => {
-      const { r, d } = await post({ action: "login", email: val(f, "email"), password: val(f, "password") }); if (!r.ok) return d.error || "Invalid email or password."; localStorage.setItem("pg_in", "1"); const me = await post({ action: "me" }); if (me.r.ok && me.d.profile.language && me.d.profile.language !== I18N.lang) { localStorage.setItem("lang", me.d.profile.language); location.reload(); return; } dash(); });
+      const { r, d } = await post({ action: "login", email: val(f, "email"), password: val(f, "password") }); if (!r.ok) { if (d.code === "EMAIL_NOT_CONFIRMED" && !f.querySelector(".resend")) { const rb = el("button", "btn ghost sm resend", "Resend verification email"); rb.type = "button"; rb.addEventListener("click", async () => { await post({ action: "resendVerification", email: val(f, "email") }); rb.textContent = T("Verification email sent (if the address is registered)."); rb.disabled = true; }); f.append(rb); } return d.error; } localStorage.setItem("pg_in", "1"); const me = await post({ action: "me" }); if (me.r.ok && me.d.profile.language && me.d.profile.language !== I18N.lang) { localStorage.setItem("lang", me.d.profile.language); location.reload(); return; } dash(); });
     const fg = el("button", "btn ghost sm", "Forgot password?"); fg.type = "button"; fg.addEventListener("click", forgot); f.append(fg);
   } else f = form([fld("Your name", "text", "name", { minLength: 2, maxLength: 80, autocomplete: "name" }), fld("Email address", "email", "email", { autocomplete: "email" }), fld("Password (min. 10 characters)", "password", "password", { minLength: 10, maxLength: 128, autocomplete: "new-password" }), consent()], "Create account", async (f) => {
-    const { r, d } = await post({ action: "signup", language: I18N.lang, name: val(f, "name"), email: val(f, "email"), password: val(f, "password") }); if (!r.ok) return d.error || "Please check your details."; auth("Check your email to verify your account."); });
+    const name = val(f, "name").trim(), email = val(f, "email").trim(), password = val(f, "password");
+    if (name.length < 2) return "Please enter your name (at least 2 characters)."; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid email address."; if (password.length < 10) return "Password does not meet the requirements (at least 10 characters).";
+    const { r, d } = await post({ action: "signup", language: I18N.lang, name, email, password }); if (!r.ok) return d.error;
+    if (d.loggedIn) { localStorage.setItem("pg_in", "1"); dash(); return; } auth("Check your email to verify your account."); });
   view(el("h2", null, "Pegasus2912 account"), tabs, m, f);
 }
 function forgot() { view(el("h2", null, "Forgot password?"), form([fld("Email address", "email", "email")], "Send reset link", async (f) => { await post({ action: "recover", email: val(f, "email") }); auth("If this email is registered, a reset link has been sent."); })); }
