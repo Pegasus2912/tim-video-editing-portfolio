@@ -163,3 +163,7 @@ h1,h2{font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;f
 .nav-r{display:flex;align-items:center;gap:10px}.lang{background:none;border:1px solid var(--line);color:var(--mu);border-radius:8px;padding:6px 10px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}.lang:hover{color:#fff}
 .ed{display:grid;gap:12px}.ed .o-f textarea{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}.ed input[type=checkbox]{width:auto}
 @media(max-width:560px){.nav-r{gap:6px}.nav-r .btn.sm{padding:7px 12px}}
+
+/* uploads, danger zone */
+.media .pv{margin:8px 0}.media .pv video,.media .pv img{max-width:260px;max-height:200px;border-radius:8px;border:1px solid var(--line);display:block}.media input[type=text],.media input[type=file]{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px}
+.danger .btn{background:#e0556b;color:#fff}

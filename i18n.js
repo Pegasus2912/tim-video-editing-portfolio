@@ -1,10 +1,11 @@
-/* German/English switch. English is the source text; German is looked up by exact string. */
+/* German/English. English is the source text; German is looked up by exact string (or by pattern). Language is kept in localStorage and in the account profile. */
 (function () {
   const D = {
-    "About": "Über mich", "Services": "Leistungen", "Work": "Portfolio", "Pricing": "Preise", "Process": "Ablauf", "Contact": "Kontakt", "Login": "Anmelden", "Account": "Konto",
+    // navigation, hero, sections
+    "About": "Über mich", "Services": "Leistungen", "Work": "Portfolio", "Pricing": "Preise", "Process": "Ablauf", "Contact": "Kontakt", "Login": "Anmelden", "Account": "Konto", "Portfolio": "Portfolio", "Skip to content": "Zum Inhalt springen",
     "Your Gameplay.": "Dein Gameplay.", "My Editing.": "Mein Schnitt.", "Your Growth.": "Dein Wachstum.",
     "I turn your gameplay into engaging videos, entertaining shorts and content your audience loves.": "Ich mache aus deinem Gameplay packende Videos, unterhaltsame Shorts und Inhalte, die dein Publikum liebt.",
-    "Specialized in Valorant & Minecraft video editing.": "Spezialisiert auf Valorant- und Minecraft-Videoschnitt.", "Explore My Work": "Meine Arbeiten ansehen", "Order Now": "Jetzt bestellen",
+    "Specialized in Valorant & Minecraft video editing.": "Spezialisiert auf Valorant- und Minecraft-Videoschnitt.", "Explore My Work": "Meine Arbeiten ansehen", "Order Now": "Jetzt bestellen", "Order now": "Jetzt bestellen",
     "About Me": "Über mich", "Hey, I’m Tim.": "Hey, ich bin Tim.", "Age": "Alter", "Editing since": "Im Schnitt seit", "Languages": "Sprachen", "German & English": "Deutsch & Englisch",
     "Hey! I’m Tim, also known as Pegasus2912.": "Hey! Ich bin Tim, auch bekannt als Pegasus2912.",
     "I’ve been editing videos since 2021 and specialize in gaming content, especially Valorant and Minecraft.": "Ich schneide seit 2021 Videos und habe mich auf Gaming-Inhalte spezialisiert, besonders Valorant und Minecraft.",
@@ -13,33 +14,112 @@
     "What I can edit for you": "Was ich für dich schneide", "My Work": "Meine Arbeiten", "All": "Alle", "Other": "Andere", "Price": "Preise", "Why Choose Me?": "Warum ich?", "What you can expect": "Das kannst du erwarten",
     "How It Works": "So funktioniert’s", "Four simple steps": "Vier einfache Schritte", "Let's Create Something Great!": "Lass uns etwas Großartiges schaffen!",
     "Have a project in mind? Looking for someone to edit your Valorant or Minecraft content? Feel free to contact me!": "Du hast ein Projekt? Du suchst jemanden für deinen Valorant- oder Minecraft-Content? Schreib mir einfach!",
-    "Navigate": "Navigation", "Connect": "Kontakt", "Privacy Policy": "Datenschutz",
+    "Email:": "E-Mail:", "Navigate": "Navigation", "Connect": "Kontakt", "Privacy Policy": "Datenschutz", "Impressum": "Impressum", "Tim Berschinski. All rights reserved.": "Tim Berschinski. Alle Rechte vorbehalten.",
+    "Freelance gaming video editing for Valorant & Minecraft creators.": "Freiberuflicher Gaming-Videoschnitt für Valorant- und Minecraft-Creator.",
+    // services, why, process
+    "Long-Form Video Editing": "Long-Form-Videoschnitt", "YouTube videos": "YouTube-Videos", "Gameplay editing": "Gameplay-Schnitt", "Funny moments": "Lustige Momente", "Highlights": "Highlights", "Clean cuts and transitions": "Saubere Schnitte und Übergänge",
+    "Sound effects": "Soundeffekte", "Background music": "Hintergrundmusik", "Engaging pacing": "Fesselndes Tempo", "Short-Form Content": "Short-Form-Inhalte", "YouTube Shorts": "YouTube Shorts", "TikTok videos": "TikTok-Videos",
+    "Vertical 9:16 editing": "Vertikaler 9:16-Schnitt", "Captions and subtitles": "Untertitel und Captions", "Engaging cuts": "Packende Schnitte", "Attention-grabbing openings": "Aufmerksamkeitsstarke Intros", "Sound effects and music": "Soundeffekte und Musik",
+    "Gaming Video Editing": "Gaming-Videoschnitt", "Valorant gameplay": "Valorant-Gameplay", "Minecraft gameplay": "Minecraft-Gameplay", "Gaming highlights": "Gaming-Highlights", "Compilation videos": "Compilation-Videos", "Entertaining gaming content": "Unterhaltsame Gaming-Inhalte",
+    "Focus on Valorant & Minecraft": "Fokus auf Valorant & Minecraft", "I know these games, their pacing and what their audiences enjoy.": "Ich kenne diese Spiele, ihr Tempo und was ihr Publikum mag.",
+    "Good long-form editing": "Guter Long-Form-Schnitt", "Clean cuts, sound design and pacing that holds attention.": "Saubere Schnitte, Sounddesign und ein Tempo, das die Aufmerksamkeit hält.",
+    "Engaging, entertaining shorts": "Packende, unterhaltsame Shorts", "Hooks, captions and quick cuts built for Shorts and TikTok.": "Hooks, Untertitel und schnelle Schnitte, gemacht für Shorts und TikTok.",
+    "Friendly communication": "Freundliche Kommunikation", "Clear, relaxed and respectful, from first message to delivery.": "Klar, entspannt und respektvoll, von der ersten Nachricht bis zur Lieferung.",
+    "Attention to detail": "Liebe zum Detail", "I review each edit carefully before I send it.": "Ich prüfe jeden Schnitt sorgfältig, bevor ich ihn abschicke.",
+    "Willing to adapt": "Anpassungsbereit", "I keep improving and happily adjust to your style and feedback.": "Ich entwickle mich weiter und passe mich gerne deinem Stil und deinem Feedback an.",
+    "Contact Me": "Schreib mir", "Tell me about your project.": "Erzähl mir von deinem Projekt.", "Send Your Footage": "Material senden", "Provide your gameplay recordings and instructions.": "Schick mir deine Gameplay-Aufnahmen und Anweisungen.",
+    "Editing": "Schnitt", "I edit your video according to your requirements.": "Ich schneide dein Video nach deinen Vorgaben.", "Delivery": "Lieferung", "Receive your finished video.": "Erhalte dein fertiges Video.",
+    // packages
+    "POPULAR": "BELIEBT", "Short-Form": "Short-Form", "Long-Form": "Long-Form", "Basic Short": "Basis-Short", "Advanced Short": "Erweiterter Short", "Premium Short": "Premium-Short", "Basic Video": "Basis-Video", "Standard Video": "Standard-Video", "Premium Video": "Premium-Video",
+    "Basic cuts": "Einfache Schnitte", "Simple subtitles": "Einfache Untertitel", "Basic sound effects": "Einfache Soundeffekte", "More detailed editing": "Detaillierterer Schnitt", "Animated captions": "Animierte Untertitel", "Better pacing": "Besseres Tempo",
+    "Detailed editing": "Detaillierter Schnitt", "Advanced captions": "Erweiterte Untertitel", "More effects": "Mehr Effekte", "Polished final result": "Ausgefeiltes Endergebnis", "Up to 5 minutes": "Bis zu 5 Minuten", "Simple editing": "Einfacher Schnitt",
+    "5–10 minutes": "5–10 Minuten", "10–20 minutes": "10–20 Minuten", "Advanced cuts": "Erweiterte Schnitte", "More polished editing": "Ausgefeilterer Schnitt",
+    // portfolio
+    "SHORT": "SHORT", "VIDEO": "VIDEO", "Watch project": "Projekt ansehen", "Coming soon": "Demnächst", "Coming Soon": "Demnächst", "This project video will be added soon.": "Dieses Projektvideo wird bald hinzugefügt.", "Video could not be loaded": "Video konnte nicht geladen werden",
+    "Valorant Montage Short": "Valorant-Montage (Short)", "Minecraft Server Advertisement Short": "Minecraft-Server-Werbung (Short)", "Minecraft Cheater Caught Short": "Minecraft: Cheater erwischt (Short)", "Discord Bot Advertisement Short": "Discord-Bot-Werbung (Short)",
+    "Minecraft Trailer (1 Minute)": "Minecraft-Trailer (1 Minute)", "Minecraft Long-Form Video": "Minecraft-Long-Form-Video",
+    // bestellung
     "Choose a service": "Service wählen", "Choose a package": "Paket wählen", "Your project": "Dein Projekt", "Review & pay": "Prüfen & bezahlen", "Short-Form Editing": "Short-Form-Schnitt", "Long-Form Editing": "Long-Form-Schnitt",
     "← Back": "← Zurück", "Review order →": "Bestellung prüfen →", "Your name": "Dein Name", "Email address": "E-Mail-Adresse", "Video type": "Videotyp", "Desired video length (e.g. 45 seconds)": "Gewünschte Videolänge (z. B. 45 Sekunden)",
     "Game": "Spiel", "Reference videos or links (https only, one per line, optional)": "Referenzvideos oder Links (nur https, ein Link pro Zeile, optional)", "Editing preferences (style, music, pacing; optional)": "Schnitt-Wünsche (Stil, Musik, Tempo; optional)",
     "Subtitles / language": "Untertitel / Sprache", "Describe exactly what you want (German or English)": "Beschreibe genau, was du möchtest (Deutsch oder Englisch)",
-    "Gameplay edit": "Gameplay-Schnitt", "Highlights": "Highlights", "Montage": "Montage", "Trailer": "Trailer", "Advertisement": "Werbevideo", "No subtitles": "Keine Untertitel", "German": "Deutsch", "English": "Englisch",
+    "Gameplay edit": "Gameplay-Schnitt", "Montage": "Montage", "Trailer": "Trailer", "Advertisement": "Werbevideo", "No subtitles": "Keine Untertitel", "German": "Deutsch", "English": "Englisch",
     " I have read the ": " Ich habe die ", " and agree that my details are used to process my order.": " gelesen und stimme zu, dass meine Angaben zur Bearbeitung meiner Bestellung verwendet werden.",
     "Service": "Service", "Package": "Paket", "Name": "Name", "Email": "E-Mail", "Length": "Länge", "Subtitles": "Untertitel", "References": "Referenzen", "Preferences": "Wünsche", "Instructions": "Anweisungen",
     "Pay securely with Stripe": "Sicher mit Stripe bezahlen", "Payment is handled by Stripe. Card details never reach this website.": "Die Zahlung läuft über Stripe. Kartendaten erreichen diese Website nie.",
     "Connecting to secure checkout…": "Verbindung zur sicheren Kasse …", "Online ordering is not available right now. Please contact me by email.": "Online-Bestellung ist gerade nicht verfügbar. Bitte kontaktiere mich per E-Mail.",
-    "Please check your details and try again.": "Bitte prüfe deine Angaben und versuche es erneut.", "Too many requests. Please try again later.": "Zu viele Anfragen. Bitte versuche es später erneut.", "Close order": "Bestellung schließen",
+    "Close order": "Bestellung schließen", "Discord": "Discord",
+    // konto
     "← Back to website": "← Zur Website", "Log in": "Anmelden", "Register": "Registrieren", "Log out": "Abmelden", "Create account": "Konto erstellen", "Password": "Passwort", "Password (min. 10 characters)": "Passwort (mind. 10 Zeichen)",
     "Forgot password?": "Passwort vergessen?", "Send reset link": "Link zum Zurücksetzen senden", "My account": "Mein Konto", "My orders": "Meine Bestellungen", "Messages": "Nachrichten", "Conversation": "Unterhaltung",
     "Check your email to verify your account.": "Bitte bestätige dein Konto über die E-Mail, die wir dir geschickt haben.", "Email verified. You can now log in.": "E-Mail bestätigt. Du kannst dich jetzt anmelden.",
     "If this email is registered, a reset link has been sent.": "Falls diese E-Mail registriert ist, wurde ein Link zum Zurücksetzen gesendet.", "Set a new password": "Neues Passwort festlegen", "Save password": "Passwort speichern",
     "Password updated. Please log in.": "Passwort geändert. Bitte melde dich an.", "This link is invalid or has expired.": "Dieser Link ist ungültig oder abgelaufen.", "You have been logged out.": "Du wurdest abgemeldet.",
-    "Invalid email or password.": "E-Mail oder Passwort ungültig.", "Please verify your email address first.": "Bitte bestätige zuerst deine E-Mail-Adresse.", "Please log in.": "Bitte melde dich an.",
     "You have no orders yet.": "Du hast noch keine Bestellungen.", "Send": "Senden", "Message (German or English)": "Nachricht (Deutsch oder Englisch)", "Messaging opens after payment is confirmed.": "Nachrichten sind nach bestätigter Zahlung möglich.",
     "No messages yet.": "Noch keine Nachrichten.", "You": "Du", "Order": "Bestellung", "Status": "Status", "Payment": "Zahlung", "paid": "bezahlt", "unpaid": "unbezahlt", "new": "neu", "Save": "Speichern", "Saved.": "Gespeichert.",
-    "Language": "Sprache", "Change password": "Passwort ändern", "New password (min. 10 characters)": "Neues Passwort (mind. 10 Zeichen)", "Account details": "Kontodaten", "Please check your details (password: at least 10 characters).": "Bitte prüfe deine Angaben (Passwort: mindestens 10 Zeichen).",
-    "Awaiting Payment": "Zahlung ausstehend", "Paid": "Bezahlt", "Confirmed": "Bestätigt", "In Progress": "In Bearbeitung", "Waiting for Customer Response": "Wartet auf deine Antwort", "Completed": "Abgeschlossen", "Cancelled": "Storniert",
-    "Message must be 1-2000 characters.": "Die Nachricht muss 1–2000 Zeichen lang sein.", "I have read the Privacy Policy": "Ich habe die Datenschutzerklärung gelesen", "Order now": "Jetzt bestellen", "Pegasus2912 account": "Pegasus2912-Konto",
+    "Language": "Sprache", "Change password": "Passwort ändern", "New password (min. 10 characters)": "Neues Passwort (mind. 10 Zeichen)", "Account details": "Kontodaten", "Pegasus2912 account": "Pegasus2912-Konto",
+    "Delete account": "Konto löschen", "This permanently deletes your account, your messages and your personal data. Paid orders are kept only in anonymised form, as legally required. This cannot be undone.": "Dadurch werden dein Konto, deine Nachrichten und deine persönlichen Daten dauerhaft gelöscht. Bezahlte Bestellungen bleiben nur anonymisiert erhalten, soweit gesetzlich vorgeschrieben. Das kann nicht rückgängig gemacht werden.",
+    "Your password": "Dein Passwort", "Type your email address to confirm": "Zur Bestätigung deine E-Mail-Adresse eingeben", "Delete my account permanently": "Mein Konto endgültig löschen", "Really delete your account? This cannot be undone.": "Konto wirklich löschen? Das kann nicht rückgängig gemacht werden.",
+    "Your account has been deleted.": "Dein Konto wurde gelöscht.",
+    // status
+    "Awaiting Payment": "Zahlung ausstehend", "Paid": "Bezahlt", "Confirmed": "Bestätigt", "In Progress": "In Bearbeitung", "Waiting for Customer Response": "Wartet auf Kundenantwort", "Completed": "Abgeschlossen", "Cancelled": "Storniert",
+    // gast-seiten, 404
+    "Your order": "Deine Bestellung", "Order not found": "Bestellung nicht gefunden", "This link is invalid.": "Dieser Link ist ungültig.", "This link is invalid or incomplete.": "Dieser Link ist ungültig oder unvollständig.", "Checking your order…": "Bestellung wird geprüft …",
+    "Order number:": "Bestellnummer:", "Thank you! Payment confirmed.": "Danke! Zahlung bestätigt.", "Your order is paid and I will start working on it.": "Deine Bestellung ist bezahlt und ich fange an, daran zu arbeiten.", "Waiting for payment confirmation": "Warte auf Zahlungsbestätigung",
+    "Stripe has not confirmed your payment yet. This can take a few seconds. Reload this page shortly. Your order is only marked paid after Stripe's verified confirmation.": "Stripe hat deine Zahlung noch nicht bestätigt. Das kann einige Sekunden dauern. Lade diese Seite gleich neu. Deine Bestellung gilt erst nach der verifizierten Bestätigung von Stripe als bezahlt.",
+    "Could not check the order": "Bestellung konnte nicht geprüft werden", "Please reload or contact me by email.": "Bitte lade die Seite neu oder schreib mir per E-Mail.", "Order conversation": "Bestellkonversation", "Back to website": "Zur Website",
+    "Save this page's link: it is your private access to your order and messages.": "Speichere den Link dieser Seite: Er ist dein privater Zugang zu Bestellung und Nachrichten.",
+    "Error 404": "Fehler 404", "Cut!": "Schnitt!", "This page doesn't exist.": "Diese Seite gibt es nicht.", "The clip you're looking for was trimmed from the timeline.": "Der gesuchte Clip wurde aus der Timeline geschnitten.", "Back to Home": "Zur Startseite",
+    // fehlermeldungen (vom Server)
+    "Invalid email or password.": "E-Mail oder Passwort ungültig.", "Please verify your email address first.": "Bitte bestätige zuerst deine E-Mail-Adresse.", "Please log in.": "Bitte melde dich an.", "Please check your details and try again.": "Bitte prüfe deine Angaben und versuche es erneut.",
+    "Too many requests. Please try again later.": "Zu viele Anfragen. Bitte versuche es später erneut.", "Too many attempts. Try again later.": "Zu viele Versuche. Bitte versuche es später erneut.", "Too many messages. Try again later.": "Zu viele Nachrichten. Bitte versuche es später erneut.",
+    "Please check your details (password: at least 10 characters).": "Bitte prüfe deine Angaben (Passwort: mindestens 10 Zeichen).", "Please check your details.": "Bitte prüfe deine Angaben.", "Password must have at least 10 characters.": "Das Passwort muss mindestens 10 Zeichen haben.",
+    "Could not change the password. Please log in again and retry.": "Passwort konnte nicht geändert werden. Bitte melde dich erneut an und versuche es noch einmal.", "Message must be 1-2000 characters.": "Die Nachricht muss 1–2000 Zeichen lang sein.", "Could not send.": "Konnte nicht gesendet werden.", "Could not send": "Konnte nicht gesendet werden", "Could not save.": "Konnte nicht gespeichert werden.",
+    "Please confirm with your password and your email address.": "Bitte bestätige mit deinem Passwort und deiner E-Mail-Adresse.", "This account cannot be deleted here.": "Dieses Konto kann hier nicht gelöscht werden.", "Deletion failed. Nothing was deleted.": "Löschen fehlgeschlagen. Es wurde nichts gelöscht.", "Deletion failed. Please contact support.": "Löschen fehlgeschlagen. Bitte kontaktiere den Support.",
+    "Accounts are not configured yet.": "Konten sind noch nicht eingerichtet.", "Online ordering is not configured yet.": "Online-Bestellung ist noch nicht eingerichtet.", "Admin is not configured.": "Admin ist noch nicht eingerichtet.", "Forbidden": "Zugriff verweigert", "Unauthorized": "Nicht autorisiert", "Not found": "Nicht gefunden", "Invalid id": "Ungültige ID",
+    "Invalid status": "Ungültiger Status", "Order is not paid (verified by Stripe).": "Bestellung ist nicht bezahlt (Bestätigung durch Stripe fehlt).", "Invalid message": "Ungültige Nachricht", "Invalid data. Please check all fields.": "Ungültige Daten. Bitte alle Felder prüfen.", "Save failed": "Speichern fehlgeschlagen", "Update failed": "Aktualisierung fehlgeschlagen",
+    "Unknown action": "Unbekannte Aktion", "Too many requests": "Zu viele Anfragen", "Invalid credentials": "Ungültige Zugangsdaten", "Invalid code": "Ungültiger Code", "Invalid code.": "Ungültiger Code.", "File type not allowed.": "Dateityp nicht erlaubt.", "File too large or empty.": "Datei zu groß oder leer.",
+    "Could not prepare the upload.": "Upload konnte nicht vorbereitet werden.", "MFA already set up.": "MFA ist bereits eingerichtet.", "Could not start MFA setup.": "MFA-Einrichtung konnte nicht gestartet werden.", "Payment provider unavailable.": "Zahlungsanbieter nicht erreichbar.", "Could not create the order.": "Bestellung konnte nicht angelegt werden.",
+    // admin
+    "Sign in": "Anmelden", "Continue": "Weiter", "Sign-in failed.": "Anmeldung fehlgeschlagen.", "Session expired. Please sign in again.": "Sitzung abgelaufen. Bitte erneut anmelden.", "Two-factor code": "Zwei-Faktor-Code", "6-digit code": "6-stelliger Code", "Verify": "Bestätigen",
+    "Set up two-factor authentication": "Zwei-Faktor-Authentifizierung einrichten", "Add this secret as a TOTP account in your authenticator app, then enter the 6-digit code:": "Füge dieses Geheimnis als TOTP-Konto in deiner Authenticator-App hinzu und gib dann den 6-stelligen Code ein:", "Setup failed.": "Einrichtung fehlgeschlagen.", "Error": "Fehler",
+    "Pegasus2912 Admin": "Pegasus2912 Admin", "Dashboard": "Dashboard", "Sign out": "Abmelden", "Overview": "Übersicht", "Orders": "Bestellungen", "Customers": "Kunden", "Prices": "Preise", "Content": "Inhalte",
+    "Total orders": "Bestellungen gesamt", "Pending payment": "Zahlung ausstehend", "In progress": "In Bearbeitung", "Unread messages": "Ungelesene Nachrichten", "Recent activity": "Letzte Aktivität", "Search customer name or email": "Kundenname oder E-Mail suchen", "Search customers": "Kunden suchen",
+    "Customer": "Kunde", "Ordered": "Bestellt", "Save status": "Status speichern", "Send reply": "Antwort senden", "Reply": "Antwort", "No registered customers yet.": "Noch keine registrierten Kunden.", "Order history": "Bestellverlauf", "verified": "bestätigt", "unverified": "unbestätigt", "disabled": "deaktiviert",
+    "+ Add": "+ Hinzufügen", "Save changes": "Änderungen speichern", "Delete": "Löschen", "short": "Short-Form", "long": "Long-Form", "Delete this entry?": "Diesen Eintrag löschen?", "Saved. The public website updates within about 10 seconds.": "Gespeichert. Die öffentliche Website aktualisiert sich innerhalb von etwa 10 Sekunden.",
+    "Prices are charged exactly as saved here (server-side). Disable a package to hide it.": "Es werden genau die hier gespeicherten Preise berechnet (serverseitig). Deaktiviere ein Paket, um es auszublenden.",
+    "Price (EUR)": "Preis (EUR)", "Included items (one per line)": "Enthaltene Leistungen (eine pro Zeile)", "Name (German)": "Name (Deutsch)", "Included items, German (one per line)": "Enthaltene Leistungen, Deutsch (eine pro Zeile)", "Highlight as popular": "Als beliebt hervorheben",
+    "Active (visible and orderable)": "Aktiv (sichtbar und bestellbar)", "ID (lowercase letters, digits, dashes; keep for existing packages)": "ID (Kleinbuchstaben, Ziffern, Bindestriche; bei bestehenden Paketen beibehalten)",
+    "Entries appear in this order on the website. Video: YouTube link/ID or upload a file (MP4/WebM, max. 50 MB). Thumbnail: upload JPG/PNG/WebP (max. 5 MB). Choose a file to preview it, then upload.": "Die Einträge erscheinen in dieser Reihenfolge auf der Website. Video: YouTube-Link/ID oder Datei hochladen (MP4/WebM, max. 50 MB). Thumbnail: JPG/PNG/WebP hochladen (max. 5 MB). Datei auswählen, Vorschau ansehen, dann hochladen.",
+    "Title": "Titel", "Title (German, optional)": "Titel (Deutsch, optional)", "Category": "Kategorie", "Format": "Format", "Duration (optional, e.g. 0:45)": "Dauer (optional, z. B. 0:45)", "Video (YouTube link/ID, or upload)": "Video (YouTube-Link/ID oder Upload)", "Thumbnail (optional)": "Thumbnail (optional)",
+    "Upload": "Hochladen", "Clear": "Leeren", "Choose a file first.": "Bitte zuerst eine Datei wählen.", "Upload failed.": "Upload fehlgeschlagen.", "Uploaded. Don't forget to save changes.": "Hochgeladen. Änderungen nicht vergessen zu speichern.", "Delete unused files": "Ungenutzte Dateien löschen",
+    "Delete uploaded files that no saved portfolio entry uses? Save your changes first.": "Hochgeladene Dateien löschen, die kein gespeicherter Portfolio-Eintrag nutzt? Speichere zuerst deine Änderungen.", "Deleted files:": "Gelöschte Dateien:",
+    "About section": "About-Bereich", "Contact information": "Kontaktinformationen", "Heading": "Überschrift", "Heading (German)": "Überschrift (Deutsch)", "Text (separate paragraphs with a blank line)": "Text (Absätze durch Leerzeile trennen)", "Text, German (blank line between paragraphs)": "Text, Deutsch (Leerzeile zwischen Absätzen)",
+    "Languages (German)": "Sprachen (Deutsch)", "Email address (shown on the website)": "E-Mail-Adresse (auf der Website angezeigt)", "Discord username": "Discord-Benutzername", "YouTube URL (https://, optional)": "YouTube-URL (https://, optional)", "TikTok URL (https://, optional)": "TikTok-URL (https://, optional)",
+    // aria / title
+    "Toggle menu": "Menü umschalten", "Language / Sprache": "Language / Sprache", "Close video": "Video schließen", "Back to top": "Nach oben", "Filter projects": "Projekte filtern", "Pricing type": "Preisart", "Main": "Hauptmenü", "Pegasus2912, back to top": "Pegasus2912, nach oben",
   };
-  const R = [[/^Step (\d) of 4$/, "Schritt $1 von 4"], [/^Total: (.+)$/, "Gesamt: $1"]];
+  const R = [
+    [/^Step (\d) of 4$/, (m) => `Schritt ${m[1]} von 4`], [/^Total: (.+)$/, (m) => `Gesamt: ${m[1]}`], [/^Showing (\d+) projects?: (.+)$/, (m) => `${m[1]} Projekt${m[1] == 1 ? "" : "e"} angezeigt: ${T(m[2])}`],
+    [/^status: (.+)$/, (m) => `Status: ${T(m[1])}`], [/^Order (PG-\d+)$/, (m) => `Bestellung ${m[1]}`], [/^(\d+) orders?$/, (m) => `${m[1]} Bestellung${m[1] == 1 ? "" : "en"}`], [/^registered (.+)$/, (m) => `registriert ${m[1]}`],
+    [/^(\d+) unread$/, (m) => `${m[1]} ungelesen`], [/^(\d+) new$/, (m) => `${m[1]} neu`], [/^account (.+)$/, (m) => `Konto: ${T(m[1])}`],
+    [/^Discord username: (.+) \(copied to clipboard\)$/, (m) => `Discord-Benutzername: ${m[1]} (in die Zwischenablage kopiert)`], [/^Discord username: (.+)$/, (m) => `Discord-Benutzername: ${m[1]}`],
+    [/^The file (.+) is missing or unreadable\. Please try again later\.$/, (m) => `Die Datei ${m[1]} fehlt oder ist nicht lesbar. Bitte versuche es später erneut.`], [/^Deleted files: (\d+)$/, (m) => `Gelöschte Dateien: ${m[1]}`],
+  ];
   const lang = (localStorage.getItem("lang") || (navigator.language || "en").slice(0, 2)).toLowerCase() === "de" ? "de" : "en";
-  const T = (s) => { if (lang !== "de" || typeof s !== "string") return s; if (D[s]) return D[s]; for (const [r, x] of R) if (r.test(s)) return s.replace(r, x); return s; };
-  const apply = (root) => { if (lang !== "de") return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), ns = []; while (w.nextNode()) ns.push(w.currentNode); ns.forEach((n) => { const t = n.nodeValue.trim(); if (t && D[t]) n.nodeValue = n.nodeValue.replace(t, D[t]); }); };
+  function T(s) {
+    if (lang !== "de" || typeof s !== "string") return s; if (D[s]) return D[s];
+    for (const [r, f] of R) { const m = s.match(r); if (m) return f(m); }
+    if (s.includes(" · ")) return s.split(" · ").map(T).join(" · "); return s;
+  }
+  const apply = (root) => {
+    if (lang !== "de") return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), ns = []; while (w.nextNode()) ns.push(w.currentNode);
+    ns.forEach((n) => { const t = n.nodeValue.trim(); if (t && T(t) !== t) n.nodeValue = n.nodeValue.replace(t, T(t)); });
+    root.querySelectorAll("[aria-label],[title],[placeholder]").forEach((e) => ["aria-label", "title", "placeholder"].forEach((a) => { const v = e.getAttribute(a); if (v && T(v) !== v) e.setAttribute(a, T(v)); }));
+  };
   document.documentElement.lang = lang;
-  window.T = T; window.I18N = { lang, T, apply, set(l) { localStorage.setItem("lang", l); location.reload(); } };
+  const set = (l) => { const done = () => { localStorage.setItem("lang", l); location.reload(); };
+    if (localStorage.getItem("pg_in") === "1") fetch("/api/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "setLanguage", language: l }) }).then(done, done); else done(); };
+  window.T = T; window.I18N = { lang, T, apply, set, dict: D };
+  if (document.body && document.body.hasAttribute("data-i18n-auto")) apply(document.body);
 })();

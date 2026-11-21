@@ -1,8 +1,8 @@
 const $ = (s) => document.querySelector(s), app = $("#app");
-const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = x; return n; };
+const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = T(x); return n; };
 const post = async (url, body) => { const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { r, d: await r.json().catch(() => ({})) }; };
 const input = (label, type, name) => { const w = el("label", "o-f"), i = el("input"); i.type = type; i.name = name; i.required = true; i.autocomplete = type === "password" ? "current-password" : "off"; w.append(el("span", null, label), i); return w; };
-const form = (fields, btn, onSubmit, msg) => { const f = el("form", "o-form"), m = el("p", "muted", msg || ""); m.setAttribute("role", "status"); f.append(...fields, el("button", "btn", btn), m); f.addEventListener("submit", async (e) => { e.preventDefault(); m.textContent = ""; const err = await onSubmit(f); if (err) m.textContent = err; }); return f; };
+const form = (fields, btn, onSubmit, msg) => { const f = el("form", "o-form"), m = el("p", "muted", msg || ""); m.setAttribute("role", "status"); f.append(...fields, el("button", "btn", btn), m); f.addEventListener("submit", async (e) => { e.preventDefault(); m.textContent = ""; const err = await onSubmit(f); if (err) m.textContent = T(err); }); return f; };
 const view = (...n) => { app.replaceChildren(el("p", "eyebrow", "Pegasus2912 Admin"), ...n); };
 const LBL = { pending_payment: "Awaiting Payment", paid: "Paid", confirmed: "Confirmed", in_progress: "In Progress", waiting_for_customer: "Waiting for Customer Response", completed: "Completed", cancelled: "Cancelled" };
 
@@ -14,7 +14,7 @@ async function enroll() { const { r, d } = await post("/api/admin-auth", { actio
 const mfaForm = (id) => form([input("6-digit code", "text", "code")], "Verify", async (f) => { const { r, d } = await post("/api/admin-auth", { action: "mfa", factorId: id, code: f.elements.namedItem("code").value.trim() }); if (!r.ok) return d.error || "Invalid code."; dash(); });
 function mfa(id) { view(el("h2", null, "Two-factor code"), mfaForm(id)); }
 
-const api = async (body) => { const { r, d } = await post("/api/admin", body); if (r.status === 401) { login("Session expired. Please sign in again."); return null; } return r.ok ? d : (alert(d.error || "Error"), null); };
+const api = async (body) => { const { r, d } = await post("/api/admin", body); if (r.status === 401) { login("Session expired. Please sign in again."); return null; } return r.ok ? d : (alert(T(d.error || "Error")), null); };
 let tab = "overview", search = "";
 function dash() {
   const bar = el("div", "row"); ["overview", "orders", "messages", "customers", "prices", "portfolio", "content"].forEach((t) => { const b = el("button", "chip", t[0].toUpperCase() + t.slice(1)); b.type = "button"; b.setAttribute("aria-pressed", t === tab); b.addEventListener("click", () => { tab = t; dash(); }); bar.append(b); });
@@ -26,7 +26,7 @@ async function overview(box) { const d = await api({ action: "overview" }); if (
   [["Total orders", d.total], ["Pending payment", d.counts.pending_payment || 0], ["Paid", d.counts.paid || 0], ["In progress", d.counts.in_progress || 0], ["Completed", d.counts.completed || 0], ["Unread messages", d.unread]].forEach(([k, v]) => { const c = el("div", "card"); c.append(el("small", "muted", k), el("div", "price", String(v))); g.append(c); });
   const l = el("ul", "list"); d.recent.forEach((o) => l.append(el("li", null, `${o.order_number} · ${o.customer_name} · ${LBL[o.status]} · ${new Date(o.created_at).toLocaleString()}`))); box.append(g, el("h3", null, "Recent activity"), l); }
 async function orders(box, onlyUnread) { const d = await api({ action: "orders" }); if (!d) return;
-  const s = el("input"); s.type = "search"; s.placeholder = "Search customer name or email"; s.value = search; s.setAttribute("aria-label", "Search customers"); const t = el("div", "tbl"); box.append(s, t);
+  const s = el("input"); s.type = "search"; s.placeholder = T("Search customer name or email"); s.value = search; s.setAttribute("aria-label", T("Search customers")); const t = el("div", "tbl"); box.append(s, t);
   const draw = () => { search = s.value.toLowerCase(); t.replaceChildren(); d.orders.filter((o) => (!onlyUnread || o.unread) && (o.customer_name + o.customer_email).toLowerCase().includes(search)).forEach((o) => { const b = el("button", "o-choice"); b.type = "button"; b.append(el("strong", null, `${o.order_number} · ${o.customer_name}`), el("span", null, `€${o.amount_cents / 100}`), el("small", null, `${o.customer_email} · ${o.package_name} · ${LBL[o.status]} · ${o.payment_status}${o.unread ? " · " + o.unread + " unread" : ""}`)); b.addEventListener("click", () => detail(o.id)); t.append(b); }); };
   s.addEventListener("input", draw); draw(); }
 async function detail(id) { const d = await api({ action: "order", id }); if (!d) return; const o = d.order;
@@ -36,7 +36,7 @@ async function detail(id) { const d = await api({ action: "order", id }); if (!d
   const sel = el("select"); Object.entries(LBL).forEach(([k, v]) => { const op = el("option", null, v); op.value = k; sel.append(op); }); sel.value = o.status;
   const sv = el("button", "btn sm", "Save status"); sv.type = "button"; sv.addEventListener("click", async () => { if (await api({ action: "setStatus", id, status: sel.value })) detail(id); });
   const th = el("div", "thread"); d.messages.forEach((m) => { const b = el("div", "msg " + m.sender); b.append(el("small", null, (m.sender === "admin" ? "You" : o.customer_name) + " · " + new Date(m.created_at).toLocaleString()), el("p", null, m.body)); th.append(b); });
-  const ta = el("textarea"); ta.rows = 4; ta.maxLength = 4000; ta.required = true; ta.setAttribute("aria-label", "Reply");
+  const ta = el("textarea"); ta.rows = 4; ta.maxLength = 4000; ta.required = true; ta.setAttribute("aria-label", T("Reply"));
   const rf = el("form", "o-form"); rf.append(ta, el("button", "btn", "Send reply")); rf.addEventListener("submit", async (e) => { e.preventDefault(); if (ta.value.trim() && await api({ action: "reply", id, body: ta.value })) detail(id); });
   const sr = el("div", "row"); sr.append(sel, sv); view(back, el("h2", null, o.order_number), dl, sr, el("h3", null, "Conversation"), th, rf); }
 /* ---- customers ---- */
@@ -48,7 +48,23 @@ async function customers(box) {
       view(back, el("h2", null, c.name || c.email), el("p", "muted", `${c.email} · account ${c.status}`), el("h3", null, "Order history"), l); }); box.append(b); });
 }
 /* ---- content editors (prices, portfolio, about, contact) ---- */
-const afield = (k, l, t, o, r) => { const w = el("label", "o-f"); w.append(el("span", null, l)); let i;
+function mediaField(k, l, kind, r) {
+  const w = el("div", "o-f media"), inp = el("input"), file = el("input"), pv = el("div", "pv"), msg = el("small", "muted"), row = el("div", "row"), up = el("button", "btn ghost sm", "Upload"), clr = el("button", "btn ghost sm", "Clear");
+  inp.type = "text"; inp.value = r[k] ?? ""; file.type = "file"; file.accept = kind === "video" ? "video/mp4,video/webm" : "image/jpeg,image/png,image/webp"; up.type = clr.type = "button"; let chosen = null;
+  const show = (src) => { pv.replaceChildren(); if (!src || !/^(https:|blob:|\/?(videos|img)\/)/.test(src)) return; const x = el(kind === "video" ? "video" : "img"); x.src = /^(https:|blob:)/.test(src) ? src : "/" + src.replace(/^\//, ""); if (kind === "video") { x.controls = true; x.preload = "metadata"; x.muted = true; x.playsInline = true; } else x.alt = ""; pv.append(x); };
+  inp.addEventListener("input", () => { r[k] = inp.value; show(inp.value); }); show(inp.value);
+  file.addEventListener("change", () => { chosen = file.files[0] || null; if (chosen) show(URL.createObjectURL(chosen)); }); // local preview before anything is uploaded
+  up.addEventListener("click", async () => {
+    if (!chosen) { msg.textContent = T("Choose a file first."); return; }
+    const g = await api({ action: "uploadUrl", kind, contentType: chosen.type, size: chosen.size }); if (!g) return;
+    const fd = new FormData(); fd.append("cacheControl", "3600"); fd.append("", chosen);
+    let ok = false; try { ok = (await fetch(g.signedUrl, { method: "PUT", headers: { "x-upsert": "false" }, body: fd })).ok; } catch {}
+    if (!ok) { msg.textContent = T("Upload failed."); return; } inp.value = r[k] = g.url; show(g.url); msg.textContent = T("Uploaded. Don't forget to save changes.");
+  });
+  clr.addEventListener("click", () => { inp.value = r[k] = ""; chosen = null; file.value = ""; show(""); });
+  row.append(up, clr); w.append(el("span", null, l), inp, file, pv, row, msg); return w;
+}
+const afield = (k, l, t, o, r) => { if (t === "media") return mediaField(k, l, o, r); const w = el("label", "o-f"); w.append(el("span", null, l)); let i;
   if (t === "select") { i = el("select"); o.forEach((x) => { const op = el("option", null, x); op.value = x; i.append(op); }); }
   else if (t === "lines" || t === "area") { i = el("textarea"); i.rows = t === "area" ? 9 : 4; }
   else { i = el("input"); i.type = t === "check" ? "checkbox" : t === "number" ? "number" : "text"; if (t === "number") i.step = "0.01"; }
@@ -58,25 +74,33 @@ const SAVED = "Saved. The public website updates within about 10 seconds.";
 async function editor(box, key, S, blank, toUI, fromUI) {
   const g = await api({ action: "contentGet", key }); if (!g) return; const rows = g.value.map(toUI), list = el("div", "tbl");
   const draw = () => { list.replaceChildren(); rows.forEach((r, i) => { const c = el("div", "card ed"), bar = el("div", "row");
-    [["↑", -1], ["↓", 1], ["Delete", 0]].forEach(([l, s]) => { const b = el("button", "btn ghost sm", l); b.type = "button"; b.addEventListener("click", () => { if (!s) { if (!confirm("Delete this entry?")) return; rows.splice(i, 1); } else { const j = i + s; if (j < 0 || j >= rows.length) return; [rows[i], rows[j]] = [rows[j], rows[i]]; } draw(); }); bar.append(b); });
+    [["↑", -1], ["↓", 1], ["Delete", 0]].forEach(([l, s]) => { const b = el("button", "btn ghost sm", l); b.type = "button"; b.addEventListener("click", () => { if (!s) { if (!confirm(T("Delete this entry?"))) return; rows.splice(i, 1); } else { const j = i + s; if (j < 0 || j >= rows.length) return; [rows[i], rows[j]] = [rows[j], rows[i]]; } draw(); }); bar.append(b); });
     c.append(...S.map(([k, l, t, o]) => afield(k, l, t, o, r)), bar); list.append(c); }); };
   const add = el("button", "btn ghost", "+ Add"), sv = el("button", "btn", "Save changes"), r2 = el("div", "row"); add.type = sv.type = "button";
-  add.addEventListener("click", () => { rows.push(blank()); draw(); }); sv.addEventListener("click", async () => { if (await api({ action: "contentSet", key, value: rows.map(fromUI) })) alert(SAVED); });
+  add.addEventListener("click", () => { rows.push(blank()); draw(); }); sv.addEventListener("click", async () => { if (await api({ action: "contentSet", key, value: rows.map(fromUI) })) alert(T(SAVED)); });
   r2.append(add, sv); box.append(list, r2); draw();
 }
 async function objEditor(box, key, S, toUI, fromUI) {
   const g = await api({ action: "contentGet", key }); if (!g) return; const r = toUI(g.value), f = el("div", "o-form"), sv = el("button", "btn", "Save changes"); sv.type = "button";
-  sv.addEventListener("click", async () => { if (await api({ action: "contentSet", key, value: fromUI(r) })) alert(SAVED); }); f.append(...S.map(([k, l, t, o]) => afield(k, l, t, o, r)), sv); box.append(f);
+  sv.addEventListener("click", async () => { if (await api({ action: "contentSet", key, value: fromUI(r) })) alert(T(SAVED)); }); f.append(...S.map(([k, l, t, o]) => afield(k, l, t, o, r)), sv); box.append(f);
 }
 const lines = (s) => String(s || "").split("\n").map((x) => x.trim()).filter(Boolean);
-function pricesEd(box) { box.append(el("p", "muted", "Prices are charged exactly as saved here (server-side). Disable a package to hide it.")); editor(box, "packages", [["name", "Name", "text"], ["price", "Price (EUR)", "number"], ["service", "Service", "select", ["short", "long"]], ["items", "Included items (one per line)", "lines"], ["hot", "Highlight as popular", "check"], ["active", "Active (visible and orderable)", "check"], ["id", "ID (lowercase letters, digits, dashes; keep for existing packages)", "text"]],
-  () => ({ id: "pkg-" + Date.now().toString(36), name: "", price: 10, service: "short", items: "", hot: false, active: true }), (p) => ({ ...p, items: p.items.join("\n") }), (p) => ({ id: p.id.trim(), service: p.service, name: p.name, price: Number(p.price), items: lines(p.items), hot: !!p.hot, active: !!p.active })); }
-const parseSrc = (s) => { s = (s || "").trim(); const m = s.match(/(?:youtu\.be\/|shorts\/|[?&]v=|embed\/)([\w-]{11})/) || (/^[\w-]{11}$/.test(s) ? [0, s] : null); return m ? { youtubeId: m[1], file: "" } : /^\/?videos\//.test(s) ? { youtubeId: "", file: s } : { youtubeId: "", file: "" }; };
-function portfolioEd(box) { box.append(el("p", "muted", "Order = order on the website. Source: YouTube link/ID or a file path like videos/clip.mp4 (upload the file to your repo's videos/ folder). Thumbnail: path like img/thumb.jpg or an https://i.ytimg.com/ URL. Direct file upload from this panel is not available.")); editor(box, "projects", [["title", "Title", "text"], ["cat", "Category", "select", ["Valorant", "Minecraft", "Other"]], ["type", "Format", "select", ["Short", "Video"]], ["dur", "Duration (optional, e.g. 0:45)", "text"], ["src", "Source (YouTube link/ID or videos/file.mp4)", "text"], ["thumb", "Thumbnail (optional)", "text"]],
-  () => ({ title: "", cat: "Valorant", type: "Short", dur: "", src: "", thumb: "" }), (p) => ({ ...p, src: p.youtubeId || p.file }), (p) => ({ title: p.title, cat: p.cat, type: p.type, dur: p.dur || "", thumb: p.thumb || "", ...parseSrc(p.src) })); }
+function pricesEd(box) { box.append(el("p", "muted", "Prices are charged exactly as saved here (server-side). Disable a package to hide it.")); editor(box, "packages", [["name", "Name", "text"], ["name_de", "Name (German)", "text"], ["price", "Price (EUR)", "number"], ["service", "Service", "select", ["short", "long"]], ["items", "Included items (one per line)", "lines"], ["items_de", "Included items, German (one per line)", "lines"], ["hot", "Highlight as popular", "check"], ["active", "Active (visible and orderable)", "check"], ["id", "ID (lowercase letters, digits, dashes; keep for existing packages)", "text"]],
+  () => ({ id: "pkg-" + Date.now().toString(36), name: "", name_de: "", items_de: "", price: 10, service: "short", items: "", hot: false, active: true }), (p) => ({ ...p, items: p.items.join("\n"), items_de: (p.items_de || []).join("\n"), name_de: p.name_de || "" }), (p) => ({ id: p.id.trim(), service: p.service, name: p.name, name_de: p.name_de || "", price: Number(p.price), items: lines(p.items), items_de: lines(p.items_de), hot: !!p.hot, active: !!p.active })); }
+const parseSrc = (s) => { s = (s || "").trim(); const m = s.match(/(?:youtu\.be\/|shorts\/|[?&]v=|embed\/)([\w-]{11})/) || (/^[\w-]{11}$/.test(s) ? [0, s] : null); return m ? { youtubeId: m[1], file: "" } : (/^\/?videos\//.test(s) || /\/storage\/v1\/object\/public\/media\/videos\//.test(s)) ? { youtubeId: "", file: s } : { youtubeId: "", file: "" }; };
+function portfolioEd(box) {
+  box.append(el("p", "muted", "Entries appear in this order on the website. Video: YouTube link/ID or upload a file (MP4/WebM, max. 50 MB). Thumbnail: upload JPG/PNG/WebP (max. 5 MB). Choose a file to preview it, then upload."));
+  const cl = el("button", "btn ghost sm", "Delete unused files"); cl.type = "button"; cl.addEventListener("click", async () => { if (!confirm(T("Delete uploaded files that no saved portfolio entry uses? Save your changes first."))) return; const r = await api({ action: "mediaCleanup" }); if (r) alert(T("Deleted files: " + r.deleted)); }); box.append(cl);
+  editor(box, "projects", [["title", "Title", "text"], ["title_de", "Title (German, optional)", "text"], ["cat", "Category", "select", ["Valorant", "Minecraft", "Other"]], ["type", "Format", "select", ["Short", "Video"]], ["dur", "Duration (optional, e.g. 0:45)", "text"], ["src", "Video (YouTube link/ID, or upload)", "media", "video"], ["thumb", "Thumbnail (optional)", "media", "thumb"]],
+    () => ({ title: "", title_de: "", cat: "Valorant", type: "Short", dur: "", src: "", thumb: "" }), (p) => ({ ...p, title_de: p.title_de || "", src: p.youtubeId || p.file }), (p) => ({ title: p.title, title_de: p.title_de || "", cat: p.cat, type: p.type, dur: p.dur || "", thumb: p.thumb || "", ...parseSrc(p.src) }));
+}
 function contentEd(box) {
   const a = el("div"), c = el("div"); box.append(el("h3", null, "About section"), a, el("h3", null, "Contact information"), c);
-  objEditor(a, "about", [["heading", "Heading", "text"], ["paragraphs", "Text (separate paragraphs with a blank line)", "area"], ["name", "Name", "text"], ["age", "Age", "text"], ["since", "Editing since", "text"], ["languages", "Languages", "text"]], (v) => ({ heading: v.heading, paragraphs: v.paragraphs.join("\n\n"), ...v.facts }), (r) => ({ heading: r.heading, paragraphs: r.paragraphs.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean), facts: { name: r.name, age: r.age, since: r.since, languages: r.languages } }));
+  objEditor(a, "about", [["heading", "Heading", "text"], ["heading_de", "Heading (German)", "text"], ["paragraphs", "Text (separate paragraphs with a blank line)", "area"], ["paragraphs_de", "Text, German (blank line between paragraphs)", "area"], ["name", "Name", "text"], ["age", "Age", "text"], ["since", "Editing since", "text"], ["languages", "Languages", "text"], ["languages_de", "Languages (German)", "text"]],
+    (v) => ({ heading: v.heading, heading_de: v.heading_de || "", paragraphs: v.paragraphs.join("\\n\\n"), paragraphs_de: (v.paragraphs_de || []).join("\\n\\n"), ...v.facts, languages_de: v.facts.languages_de || "" }),
+    (r) => ({ heading: r.heading, heading_de: r.heading_de || "", paragraphs: pars(r.paragraphs), paragraphs_de: pars(r.paragraphs_de), facts: { name: r.name, age: r.age, since: r.since, languages: r.languages, languages_de: r.languages_de || "" } }));
   objEditor(c, "contact", [["email", "Email address (shown on the website)", "text"], ["discord", "Discord username", "text"], ["youtube", "YouTube URL (https://, optional)", "text"], ["tiktok", "TikTok URL (https://, optional)", "text"]], (v) => v, (r) => ({ email: r.email, discord: r.discord, youtube: r.youtube || "", tiktok: r.tiktok || "" }));
 }
-login();
+const pars = (s) => String(s || "").split(/\\n\\s*\\n/).map((x) => x.trim()).filter(Boolean);
+const lg = $("#lang"); lg.textContent = I18N.lang === "de" ? "EN" : "DE"; lg.addEventListener("click", () => I18N.set(I18N.lang === "de" ? "en" : "de"));
+login(); I18N.apply(document.body);

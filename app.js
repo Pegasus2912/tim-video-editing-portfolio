@@ -55,9 +55,9 @@ const CONFIG = {
 /* ===== END CONFIG ===== */
 // Content saved in the admin panel (loaded from /api/content.js) overrides the defaults above.
 (function () {
-  const X = window.__CONTENT; if (!X) return;
-  if (Array.isArray(X.packages)) { const act = X.packages.filter((p) => p.active), m = (s) => act.filter((p) => p.service === s).map((p) => ({ id: p.id, name: p.name, price: p.price, items: p.items, hot: p.hot })); CONFIG.pricesShort = m("short"); CONFIG.pricesLong = m("long"); }
-  if (Array.isArray(X.projects)) CONFIG.projects = X.projects.map((p) => ({ title: p.title, cat: p.cat, type: p.type, dur: p.dur || "", thumb: p.thumb || "", file: p.file || "", youtubeId: p.youtubeId || "" }));
+  const X = window.__CONTENT; if (!X) return; const de = window.I18N && I18N.lang === "de";
+  if (Array.isArray(X.packages)) { const act = X.packages.filter((p) => p.active), m = (s) => act.filter((p) => p.service === s).map((p) => ({ id: p.id, name: (de && p.name_de) || p.name, price: p.price, items: de && p.items_de && p.items_de.length ? p.items_de : p.items, hot: p.hot })); CONFIG.pricesShort = m("short"); CONFIG.pricesLong = m("long"); }
+  if (Array.isArray(X.projects)) CONFIG.projects = X.projects.map((p) => ({ title: (de && p.title_de) || p.title, cat: p.cat, type: p.type, dur: p.dur || "", thumb: p.thumb || "", file: p.file || "", youtubeId: p.youtubeId || "" }));
   if (X.contact) Object.assign(CONFIG.contact, X.contact);
 })();
 
@@ -85,7 +85,7 @@ tg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
   pg.classList.add("out"); setTimeout(() => { pg.replaceChildren(...PRICES[m].map(priceCard)); pg.classList.remove("out"); }, 220);
 }));
 CONFIG.why.forEach(([i, t, d]) => { const c = el("article", "card rv"); c.append(el("div", "ic", i), el("h3", null, t), el("p", null, d)); $("#why-grid").append(c); });
-CONFIG.steps.forEach(([i, t, d], n) => { const li = el("li", "rv"); li.append(el("div", "ic", i), el("h3", null, `${n + 1}. ${t}`), el("p", null, d)); $("#steps").append(li); });
+CONFIG.steps.forEach(([i, t, d], n) => { const li = el("li", "rv"); li.append(el("div", "ic", i), el("h3", null, `${n + 1}. ${T(t)}`), el("p", null, d)); $("#steps").append(li); });
 
 /* Portfolio */
 const cats = ["All", "Valorant", "Minecraft", "Other"], gal = $("#gallery");
@@ -95,7 +95,7 @@ const isYT = (id) => /^[\w-]{11}$/.test(id);
 function renderGallery() {
   gal.replaceChildren();
   const list = CONFIG.projects.filter((p) => match(p, active));
-  $("#gstat").textContent = `Showing ${list.length} project${list.length === 1 ? "" : "s"}: ${active}`;
+  $("#gstat").textContent = T(`Showing ${list.length} project${list.length === 1 ? "" : "s"}: ${active}`);
   list.forEach((p) => {
     const vert = p.type === "Short", ok = !!p.file || isYT(p.youtubeId);
     const card = el("article", "proj " + (vert ? "vert" : "wide")), b = el("button", "thumb");
@@ -158,7 +158,7 @@ const C = CONFIG.contact, row = $("#contact-row");
 const link = (label, href, ghost) => { const a = el("a", "btn" + (ghost ? " ghost" : ""), label); a.href = href; if (href.startsWith("https")) { a.target = "_blank"; a.rel = "noopener noreferrer"; } return a; };
 const mail = "mailto:" + encodeURIComponent(C.email).replace("%40", "@");
 const dc = el("button", "btn", "Discord"); dc.type = "button"; dc.setAttribute("aria-describedby", "toast");
-dc.addEventListener("click", async () => { let m = "Discord username: " + C.discord; try { await navigator.clipboard.writeText(C.discord); m += " (copied to clipboard)"; } catch {} $("#toast").textContent = m; });
+dc.addEventListener("click", async () => { let m = "Discord username: " + C.discord; try { await navigator.clipboard.writeText(C.discord); m += " (copied to clipboard)"; } catch {} $("#toast").textContent = T(m); });
 const socials = [["YouTube", C.youtube], ["TikTok", C.tiktok]].map(([t, u]) => [t, u ? safeUrl(u) : "#"]).filter(([, u]) => u !== "#");
 row.append(dc, link("Email", mail, true), ...socials.map(([t, u]) => link(t, u, true)));
 $("#c-mail").href = mail; $("#c-mail").textContent = C.email; $("#c-dc").textContent = C.discord;
@@ -283,10 +283,10 @@ document.addEventListener("keydown", (e) => {
 
 /* About section from admin content */
 (function () {
-  const A = (window.__CONTENT || {}).about; if (!A) return;
-  if (A.heading) $(".about h2").textContent = A.heading;
-  if (Array.isArray(A.paragraphs)) $(".about .txt").replaceChildren(...A.paragraphs.map((x) => el("p", null, x)));
-  if (A.facts) { const dd = document.querySelectorAll(".facts dd"); [A.facts.name, A.facts.age, A.facts.since, A.facts.languages].forEach((v, i) => { if (v && dd[i]) dd[i].textContent = v; }); }
+  const A = (window.__CONTENT || {}).about; if (!A) return; const de = window.I18N && I18N.lang === "de";
+  if (A.heading) $(".about h2").textContent = (de && A.heading_de) || A.heading;
+  if (Array.isArray(A.paragraphs)) $(".about .txt").replaceChildren(...(de && A.paragraphs_de && A.paragraphs_de.length ? A.paragraphs_de : A.paragraphs).map((x) => el("p", null, x)));
+  if (A.facts) { const dd = document.querySelectorAll(".facts dd"); [A.facts.name, A.facts.age, A.facts.since, (de && A.facts.languages_de) || A.facts.languages].forEach((v, i) => { if (v && dd[i]) dd[i].textContent = v; }); }
 })();
 /* Login/Account button, language switch, German translation of static text */
 (function () {

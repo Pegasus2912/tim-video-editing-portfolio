@@ -1,41 +1,54 @@
-# Pegasus2912: Setup Guide
+# Pegasus2912: Setup Guide and Status
 
-## 1. What is implemented, and how far it was tested
-**Tested in this project (simulated browser + mocked/unit tests):** website, portfolio (7 videos), German/English switch, order wizard up to the Stripe redirect, account/dashboard screens, admin screens and editors, input validators, and that every protected API route rejects requests without a valid session (401/403/404).
-**Implemented but NOT tested against real services (you must test after configuring):** Supabase sign-up/login/email verification/password reset, database policies, MFA login, Stripe Checkout + webhook, all emails, the real data flow of every dashboard.
-**Not built:** direct thumbnail/video file upload in the admin (you give a path or URL), account deletion, German translation of the service/"why me"/process card texts, the admin panel UI (English only), the guest order pages `order.html`/`order-success.html` (English only), separate languages for package names (one text for both languages).
+## 1. Final checklist (what exists and how it was verified)
+"Mock" = tested with in-memory fakes of Supabase/Stripe (logic only). "Postgres" = tested on a real PostgreSQL 16 with Supabase-like stubs (tables, roles, RLS, functions). "jsdom" = simulated browser. **Nothing was tested against real Supabase, Stripe, Resend or Vercel; no real browser was available.**
+
+| Feature | Implemented | Verified |
+|---|---|---|
+| Hero image, Discord video, portfolio (7 videos) | yes | Files exist; MP4 is H.264/AAC; served correctly by a local server (`npm run verify`); fallback logic in jsdom. **Real playback not tested in a browser.** |
+| Registration, email verification, login, logout, password reset | yes (via Supabase Auth) | Request validation/rate limits in Mock. **Real Supabase flow untested.** |
+| Customer dashboard (orders, status, messages, account) | yes | Mock + jsdom |
+| Account deletion (own account only) | yes | Mock (password + typed email, admin protected, other users untouched); erase function on Postgres |
+| Customers see only their own data | yes | Mock (two customers) + **Postgres RLS (two customers, anonymous, admin)** |
+| Customers cannot change payment/status/roles | yes | Postgres (no write grants; profile only name/language) + Mock |
+| Admin panel (orders, status, messages, customers, prices, packages, portfolio, About, contact) | yes | Mock (authz) + jsdom (UI) |
+| Admin = only `Info@statelight.de`, one user ID, MFA, server-side | yes | Mock (customer token, other user, no MFA, missing admins row -> 401). **Real MFA login untested.** |
+| Uploads of videos/thumbnails to Supabase Storage, preview, replace, delete unused | yes | Mock (type/size/name rules, cleanup) + jsdom (preview, signed URL request, PUT). **Real Storage upload untested.** |
+| German/English: whole site, account, ordering, order pages, admin; separate DE/EN package and About texts | yes | jsdom coverage scan of every page. German wording is not reviewed by a native speaker. `legal.html` is NOT translated (see section 9). |
+| Stripe Checkout, webhook (signature, amount check, duplicates, expired/failed) | yes | Mock only. **Real Stripe untested.** |
+| Emails (order received, paid, status change, new message, account deleted) | yes | Code path only; **no email was sent**. |
 
 ## 2. Supabase
-1. Create a project. SQL Editor: run `supabase/schema.sql`, then `supabase/migration-002-accounts-cms.sql`.
-2. Authentication -> Providers -> Email: enable email sign-ups **and "Confirm email"** (customers must verify). Authentication -> URL Configuration: Site URL = your domain; add `https://YOUR-DOMAIN/account.html` to Redirect URLs.
-3. Authentication -> SMTP: Supabase's built-in mail is heavily rate-limited; set your own SMTP (e.g. Resend SMTP) so verification and reset mails arrive.
+1. Create a project. SQL Editor: run in this order `supabase/schema.sql`, `supabase/migration-002-accounts-cms.sql`, `supabase/migration-003-storage-deletion.sql` (creates the public-read `media` bucket: 50 MB limit, only mp4/webm/jpg/png/webp; no write policies).
+2. Authentication -> Providers -> Email: enable sign-ups **and "Confirm email"**. URL Configuration: Site URL = your domain; add `https://YOUR-DOMAIN/account.html` as Redirect URL.
+3. Authentication -> SMTP: set a custom SMTP (see section 5); the built-in mail sender is heavily rate limited.
 4. Authentication -> Multi-Factor: enable TOTP.
-5. Settings -> API: copy the project URL, the `anon` key and the `service_role` key (secret!).
+5. Storage: check that bucket `media` exists (public). Settings -> API: copy project URL, `anon` key, `service_role` key (secret!).
 
-## 3. Create YOUR admin account (do this BEFORE announcing the site)
-1. Supabase -> Authentication -> Users -> Add user: email `Info@statelight.de`, choose a strong password yourself, tick "Auto confirm". The password never goes into code or chat.
-2. SQL Editor: `insert into public.admins (user_id) select id from auth.users where email = 'Info@statelight.de';`
-3. Open `/admin.html`, sign in, scan the shown secret with an authenticator app and verify. Do this immediately.
-How it is secured: admin access requires, on the server for every call, a valid session + exact `ADMIN_EMAIL` + a row in `admins` (your user ID) + MFA. `admins` has no public access; nobody can write to it except via your SQL editor. Customers cannot change roles (profiles allow updating only name/language). The sign-up API refuses the admin email, and Supabase emails are unique.
+## 3. Your admin account (do this before announcing the site)
+1. Authentication -> Users -> Add user: `Info@statelight.de`, strong password chosen by you, "Auto confirm". The password never goes into code or chat.
+2. SQL: `insert into public.admins (user_id) select id from auth.users where email = 'Info@statelight.de';`
+3. Open `/admin.html`, sign in, scan the shown secret in an authenticator app, verify.
+Security model: every admin call is checked on the server: valid session + exact `ADMIN_EMAIL` + row in `admins` + MFA (aal2). `admins` has no public access. Customer sign-up refuses the admin address. Customers can only change name and language of their profile.
 
-## 4. Stripe (test mode first)
-Test-mode secret key (`sk_test_...`). Webhook endpoint `https://YOUR-DOMAIN/api/stripe-webhook` with events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `checkout.session.async_payment_failed`; copy the signing secret (`whsec_...`). Live keys only after everything is verified.
+## 4. Stripe (test mode)
+Test secret key (`sk_test_...`). Webhook `https://YOUR-DOMAIN/api/stripe-webhook`, events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `checkout.session.async_payment_failed`; copy `whsec_...`. Test cards: success `4242 4242 4242 4242`, declined `4000 0000 0000 0002`; close the Stripe page to test cancel (the order stays "Awaiting Payment" until the session expires, then becomes "Cancelled"). Live keys only after all tests pass.
 
-## 5. Vercel environment variables (Project -> Settings -> Environment Variables)
-`SITE_URL` (https://your-domain, no trailing slash), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAIL` (Info@statelight.de), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Optional emails (order received, paid, status change, new message): `RESEND_API_KEY`, `MAIL_FROM` (a sender on a domain verified in Resend). Redeploy after changes. See `.env.example` (placeholders only).
+## 5. Email
+Two senders: (a) **Supabase** sends verification and password-reset mails; (b) **this site** sends order, payment, status, message and deletion mails through Resend. Steps: create a Resend account -> add and verify your sending domain (DNS records) -> create an API key -> set `RESEND_API_KEY` and `MAIL_FROM` (e.g. `Pegasus2912 <orders@your-domain>`) in Vercel. For (a): Resend -> SMTP credentials -> Supabase Authentication -> SMTP. Without Resend the site works but sends no order/status/message emails.
 
-## 6. Deploy
-Push the whole folder to GitHub (keep `api/`, `img/`, `videos/`, `supabase/`, `scripts/`, `package.json`, `package-lock.json`), import in Vercel (Framework: Other, no build command).
+## 6. Vercel
+Environment variables: `SITE_URL` (https://your-domain, no trailing slash), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAIL=Info@statelight.de`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; optional `RESEND_API_KEY`, `MAIL_FROM`. Push the whole folder to GitHub (keep `api/`, `img/`, `videos/`, `supabase/`, `scripts/`, `package.json`, `package-lock.json`), import in Vercel (Framework: Other, no build command), redeploy after changing variables. Placeholders only in `.env.example`.
 
-## 7. Verify assets after deploy (hero image + Discord video)
-Locally before pushing: `npm install` then `npm run check` (all referenced files exist).
-After deploy: `npm run verify -- https://YOUR-DOMAIN` (checks status, content type, size and the MP4 header of the hero image, poster, video, favicon, content script). Then open the site: the hero image must show and the Discord video must play. If one fails, the folder/file is missing in GitHub (names are lowercase and case-sensitive) or an old `vercel.json` is deployed.
+## 7. Verify before and after deploying
+`npm install`, then `npm run check` (all referenced files exist) and, after deploy, `npm run verify -- https://YOUR-DOMAIN` (hero, poster, video incl. MP4 header, favicon, content script). Then open the site: hero image visible, Discord video plays. If not, the file is missing on GitHub (lowercase, case-sensitive names) or an old `vercel.json` is deployed.
 
-## 8. Test checklist
-Register -> verification mail -> login -> order a package with card `4242 4242 4242 4242` -> order appears in dashboard as paid -> send a message -> admin: reply, change status (customer sees it) -> create a second customer account and confirm it cannot see the first one's orders -> admin: edit a price, a video, About, contact and see the public site change within ~10 s -> in a private window request `/api/admin` (must be 401).
+## 8. Your test plan with real services
+1. Register two customers (verify both emails) and order a package with each (test card). 2. Confirm each sees only their own order, status and messages. 3. Admin: change status (customer sees it), reply to a message. 4. Admin Prices: change a price, order again: Stripe shows the new price. 5. Admin Portfolio: upload a video and a thumbnail (preview first), save, check the public site, remove the entry, save, "Delete unused files". 6. Edit About/contact in DE and EN; switch the site language. 7. Delete a customer account from "Account details". 8. Failed and cancelled payments. 9. Confirm in a private window that `/api/admin` answers 401. 10. Check the browser console on every page.
 
-## 9. Content management notes
-Prices charged are read server-side from the database (never from the browser). Defaults apply until you save content. Portfolio sources: YouTube link/ID or a file path in your repo's `videos/` folder.
-
-## 10. Remaining risks / to do before real money
-Rate limiting is per server instance (add Vercel Firewall or Upstash for strict limits). Complete `legal.html` (address, terms, withdrawal information, providers) with qualified advice. Use 2FA on GitHub, Vercel, Supabase, Stripe. Run `npm audit` after dependency updates. YouTube thumbnails load from Google when a page opens (use your own thumbnails to avoid that).
+## 9. Known limits, risks, to do
+- **Legal:** `legal.html` (Impressum, privacy) is English only, a template and not legal advice. German law requires German texts with your address, VAT/trade details etc.; have them written/checked. Paid orders survive account deletion only anonymised (amount, package, dates, payment ids); ask your tax advisor what must be kept and for how long. Orders placed as a guest (not logged in) are not linked to an account; deleting an account does not touch them (handle such requests by email).
+- **CSP:** `vercel.json` allows `https://*.supabase.co` for images, video and connections (uploads/playback). Tighten it to your exact project host (`https://xxxx.supabase.co`) once known.
+- **Uploads:** only the admin can upload, with server-chosen random names and Storage-enforced size/type limits. The browser declares the content type; files are served as static media from the Supabase domain, never executed. The upload request format (multipart PUT to the signed URL) follows Supabase's client library but is untested against the real service.
+- Rate limiting is per serverless instance (add Vercel Firewall/Upstash for strict limits). YouTube thumbnails load from Google when a page opens. German wording and the admin translations need your review. Package names stored inside old orders stay in the language they were bought in.
+- Use 2FA on GitHub, Vercel, Supabase, Stripe, Resend. Run `npm audit` after dependency changes.
