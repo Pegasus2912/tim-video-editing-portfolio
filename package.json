@@ -5,7 +5,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "audit": "npm audit"
+    "audit": "npm audit",
+    "check": "node scripts/check-assets.js",
+    "verify": "node scripts/verify-deploy.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

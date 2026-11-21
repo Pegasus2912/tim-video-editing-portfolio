@@ -12,6 +12,8 @@
 <meta name="theme-color" content="#0a0a0f">
 <link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="styles.css">
+<script src="i18n.js" defer></script>
+<script src="/api/content.js" defer></script>
 <script src="app.js" defer></script>
 </head>
 <body>
@@ -19,10 +21,8 @@
 <a class="skip" href="#main">Skip to content</a>
 <header class="nav" id="nav">
   <a class="logo" href="#top" aria-label="Pegasus2912, back to top">Pegasus<span>2912</span></a>
-  <button class="burger" id="burger" aria-label="Toggle menu" aria-expanded="false" aria-controls="menu"><i></i><i></i><i></i></button>
-  <nav id="menu" aria-label="Main">
-    <a href="#about">About</a><a href="#services">Services</a><a href="#work">Work</a><a href="#pricing">Pricing</a><a href="#process">Process</a><a class="btn sm" href="#contact">Contact</a>
-  </nav>
+  <nav id="menu" aria-label="Main"><a href="#about">About</a><a href="#services">Services</a><a href="#work">Work</a><a href="#pricing">Pricing</a><a href="#process">Process</a><a class="btn sm" href="#contact">Contact</a></nav>
+  <div class="nav-r"><button class="lang" id="lang" type="button" aria-label="Language / Sprache">DE</button><a class="btn sm ghost" id="acct" href="/account.html">Login</a><button class="burger" id="burger" aria-label="Toggle menu" aria-expanded="false" aria-controls="menu"><i></i><i></i><i></i></button></div>
 </header>
 <main id="main" tabindex="-1">
 <section class="hero" id="top">
@@ -34,7 +34,7 @@
       <p class="muted">Specialized in Valorant &amp; Minecraft video editing.</p>
       <div class="row"><a class="btn" href="#work">Explore My Work</a><a class="btn ghost" href="#pricing">Order Now</a></div>
     </div>
-    <figure class="art-wrap"><img class="art" src="img/pegasus.jpg" width="720" height="720" alt="Pegasus2912 artwork: a white-haired character in a dark jacket against a purple background"></figure>
+    <figure class="art-wrap"><img class="art" src="/img/pegasus.jpg" width="720" height="720" decoding="async" fetchpriority="high" alt="Pegasus2912 artwork"></figure>
   </div>
 </section>
 

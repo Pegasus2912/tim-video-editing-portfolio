@@ -1,3 +1,4 @@
+if (!window.T) window.T = (s) => s;
 /* ===== EDIT YOUR CONTENT HERE (everything marked REPLACE) ===== */
 const PLACEHOLDER_ID = ""; // empty = project shows "Coming Soon" (no video is ever loaded)
 const P = (title, cat, type, dur, src = "", thumb = "") => { const f = src.startsWith("videos/"); return { title, cat, type, dur, thumb, file: f ? src : "", youtubeId: f ? "" : src }; };
@@ -52,9 +53,16 @@ const CONFIG = {
   ],
 };
 /* ===== END CONFIG ===== */
+// Content saved in the admin panel (loaded from /api/content.js) overrides the defaults above.
+(function () {
+  const X = window.__CONTENT; if (!X) return;
+  if (Array.isArray(X.packages)) { const act = X.packages.filter((p) => p.active), m = (s) => act.filter((p) => p.service === s).map((p) => ({ id: p.id, name: p.name, price: p.price, items: p.items, hot: p.hot })); CONFIG.pricesShort = m("short"); CONFIG.pricesLong = m("long"); }
+  if (Array.isArray(X.projects)) CONFIG.projects = X.projects.map((p) => ({ title: p.title, cat: p.cat, type: p.type, dur: p.dur || "", thumb: p.thumb || "", file: p.file || "", youtubeId: p.youtubeId || "" }));
+  if (X.contact) Object.assign(CONFIG.contact, X.contact);
+})();
 
 const $ = (s) => document.querySelector(s);
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }; // textContent only: no HTML injection
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = T(text); return n; }; // textContent only: no HTML injection
 const safeUrl = (u) => { try { const x = new URL(u); return x.protocol === "https:" ? x.href : "#"; } catch { return "#"; } };
 const goContact = () => { const a = el("a", "btn ghost", "Contact Me"); a.href = "#contact"; return a; };
 
@@ -93,7 +101,7 @@ function renderGallery() {
     const card = el("article", "proj " + (vert ? "vert" : "wide")), b = el("button", "thumb");
     b.type = "button"; b.setAttribute("aria-label", (ok ? "Play " : "Coming soon: ") + p.title);
     const src = p.thumb || (isYT(p.youtubeId) ? `https://i.ytimg.com/vi/${p.youtubeId}/hqdefault.jpg` : "");
-    const fallback = () => { b.classList.add("t-" + p.cat.toLowerCase()); b.prepend(el("span", "gw", p.cat)); };
+    const fallback = () => b.classList.add("t-none"); // clean neutral panel, no placeholder words
     if (src) { const im = el("img"); im.alt = ""; im.loading = "lazy"; im.addEventListener("error", () => { im.remove(); fallback(); }, { once: true }); im.src = src; b.append(im); } else fallback();
     b.append(el("span", "badge", vert ? "SHORT" : "VIDEO"));
     if (p.dur) b.append(el("span", "dur", p.dur));
@@ -117,16 +125,22 @@ renderGallery();
 /* Modal: placeholders show "Coming Soon"; real IDs load a click-to-play YouTube embed */
 const modal = $("#modal"); let lastFocus;
 const setInert = (on) => ["#main", "#nav", ".foot", "#top-btn"].forEach((s) => { const n = $(s); if (n) on ? n.setAttribute("inert", "") : n.removeAttribute("inert"); });
+const soonBox = (t, s) => { const d = el("div", "soon-in"); d.append(el("p", "soon-t", t), el("p", null, s)); return d; };
 function openModal(p) {
   lastFocus = document.activeElement; $("#m-title").textContent = p.title;
   const box = $("#m-vid"), yt = isYT(p.youtubeId), vert = p.type === "Short";
   box.classList.toggle("soon", !yt && !p.file); box.classList.toggle("v", vert); $(".m-box").classList.toggle("v", vert);
-  if (p.file) { const v = el("video"); v.src = p.file; v.controls = true; v.autoplay = true; v.playsInline = true; if (p.thumb) v.poster = p.thumb; v.setAttribute("controlslist", "nodownload"); box.replaceChildren(v); }
+  if (p.file) {
+    const v = el("video"), s = el("source"); v.controls = true; v.playsInline = true; v.preload = "auto"; if (p.thumb) v.poster = p.thumb; v.setAttribute("controlslist", "nodownload");
+    s.src = p.file; s.type = "video/mp4"; v.append(s);
+    const fail = () => { box.classList.add("soon"); box.replaceChildren(soonBox("Video could not be loaded", "The file " + p.file + " is missing or unreadable. Please try again later.")); console.warn("Video failed to load:", p.file); };
+    v.addEventListener("error", fail); s.addEventListener("error", fail); box.replaceChildren(v); v.play().catch(() => {});
+  }
   else if (yt) {
     const f = el("iframe"); f.src = `https://www.youtube-nocookie.com/embed/${p.youtubeId}?autoplay=1&rel=0`;
     f.title = p.title; f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen"; f.allowFullscreen = true; f.referrerPolicy = "strict-origin-when-cross-origin";
     box.replaceChildren(f);
-  } else { const d = el("div", "soon-in"); d.append(el("p", "soon-t", "Coming Soon"), el("p", null, "This project video will be added soon.")); box.replaceChildren(d); }
+  } else box.replaceChildren(soonBox("Coming Soon", "This project video will be added soon."));
   setInert(true); document.body.classList.add("lock"); modal.hidden = false; $("#m-x").focus();
 }
 function closeModal() { modal.hidden = true; $("#m-vid").replaceChildren(); setInert(false); document.body.classList.remove("lock"); if (lastFocus) lastFocus.focus(); }
@@ -208,7 +222,7 @@ const ob = el("div", "o-box"); ow.append(ob); document.body.append(ow);
 let ord = {}, step = 1, oLast;
 const pk = () => ALLPK.find((p) => p.id === ord.packageId);
 const back = (s) => { const b = el("button", "btn ghost", "← Back"); b.type = "button"; b.addEventListener("click", () => { step = s; draw(); }); return b; };
-function openOrder(id) { oLast = document.activeElement; ord = id ? { packageId: id, service: id.split("-")[0] } : {}; step = id ? 3 : 1; setInert(true); document.body.classList.add("lock"); ow.hidden = false; draw(); }
+function openOrder(id) { oLast = document.activeElement; ord = id ? { packageId: id, service: (ALLPK.find((p) => p.id === id) || {}).service } : {}; step = id ? 3 : 1; setInert(true); document.body.classList.add("lock"); ow.hidden = false; draw(); }
 function closeOrder() { ow.hidden = true; setInert(false); document.body.classList.remove("lock"); if (oLast) oLast.focus(); }
 function draw() {
   ob.replaceChildren(); ob.scrollTop = 0;
@@ -227,7 +241,7 @@ function draw() {
     });
     const cw = el("label", "o-c"), cb = el("input"); cb.type = "checkbox"; cb.name = "consent"; cb.required = true; cb.checked = !!ord.consent;
     const pl = el("a", null, "Privacy Policy"); pl.href = "legal.html#privacy"; pl.target = "_blank"; pl.rel = "noopener";
-    cw.append(cb, document.createTextNode(" I have read the "), pl, document.createTextNode(" and agree that my details are used to process my order."));
+    cw.append(cb, document.createTextNode(T(" I have read the ")), pl, document.createTextNode(T(" and agree that my details are used to process my order.")));
     const nx = el("button", "btn", "Review order →"); nx.type = "submit"; const row = el("div", "row"); row.append(back(2), nx); f.append(cw, row);
     f.addEventListener("submit", (e) => { e.preventDefault(); FIELDS.forEach(([n]) => { ord[n] = f.elements.namedItem(n).value.trim(); }); ord.consent = cb.checked; step = 4; draw(); });
     ob.append(f);
@@ -243,14 +257,14 @@ function draw() {
   t.focus();
 }
 async function checkout(btn, msg) {
-  btn.disabled = true; msg.textContent = "Connecting to secure checkout…";
+  btn.disabled = true; msg.textContent = T("Connecting to secure checkout…");
   const body = {}; ["packageId", "name", "email", "videoType", "length", "game", "refs", "prefs", "subs", "notes", "consent"].forEach((k) => { body[k] = ord[k]; });
   try {
     const r = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (r.ok && typeof d.url === "string" && d.url.startsWith("https://checkout.stripe.com/")) { location.assign(d.url); return; }
-    msg.textContent = d.error || "Online ordering is not available right now. Please contact me by email.";
-  } catch { msg.textContent = "Online ordering is not available right now. Please contact me by email."; }
+    msg.textContent = T(d.error || "Online ordering is not available right now. Please contact me by email.");
+  } catch { msg.textContent = T("Online ordering is not available right now. Please contact me by email."); }
   btn.disabled = false;
 }
 document.addEventListener("keydown", (e) => {
@@ -259,3 +273,23 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Tab") { const f = [...ow.querySelectorAll("button,input,select,textarea,a[href]")].filter((n) => !n.disabled), i = f.indexOf(document.activeElement);
     if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
 });
+
+/* Hero artwork: if the file is missing/broken, show a neutral panel instead of alt text */
+(function () {
+  const a = $(".art"); if (!a) return;
+  const fail = () => { console.warn("Hero image failed to load: /img/pegasus.jpg (is the img/ folder deployed?)"); a.closest(".art-wrap").classList.add("noimg"); a.remove(); };
+  a.addEventListener("error", fail); if (a.complete && a.naturalWidth === 0) fail();
+})();
+
+/* About section from admin content */
+(function () {
+  const A = (window.__CONTENT || {}).about; if (!A) return;
+  if (A.heading) $(".about h2").textContent = A.heading;
+  if (Array.isArray(A.paragraphs)) $(".about .txt").replaceChildren(...A.paragraphs.map((x) => el("p", null, x)));
+  if (A.facts) { const dd = document.querySelectorAll(".facts dd"); [A.facts.name, A.facts.age, A.facts.since, A.facts.languages].forEach((v, i) => { if (v && dd[i]) dd[i].textContent = v; }); }
+})();
+/* Login/Account button, language switch, German translation of static text */
+(function () {
+  const ac = $("#acct"), lg = $("#lang"); if (localStorage.getItem("pg_in") === "1") ac.textContent = "Account";
+  if (window.I18N) { lg.textContent = I18N.lang === "de" ? "EN" : "DE"; lg.addEventListener("click", () => I18N.set(I18N.lang === "de" ? "en" : "de")); I18N.apply(document.body); }
+})();
