@@ -1,106 +1,75 @@
-const $ = (s) => document.querySelector(s), app = $("#app");
-const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = T(x); return n; };
-const post = async (url, body) => { const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { r, d: await r.json().catch(() => ({})) }; };
-const input = (label, type, name) => { const w = el("label", "o-f"), i = el("input"); i.type = type; i.name = name; i.required = true; i.autocomplete = type === "password" ? "current-password" : "off"; w.append(el("span", null, label), i); return w; };
-const form = (fields, btn, onSubmit, msg) => { const f = el("form", "o-form"), m = el("p", "muted", msg || ""); m.setAttribute("role", "status"); f.append(...fields, el("button", "btn", btn), m); f.addEventListener("submit", async (e) => { e.preventDefault(); m.textContent = ""; const err = await onSubmit(f); if (err) m.textContent = T(err); }); return f; };
-const view = (...n) => { app.replaceChildren(el("p", "eyebrow", "Pegasus2912 Admin"), ...n); };
-const LBL = { pending_payment: "Awaiting Payment", paid: "Paid", confirmed: "Confirmed", in_progress: "In Progress", waiting_for_customer: "Waiting for Customer Response", completed: "Completed", cancelled: "Cancelled" };
-
-function login(msg) { view(el("h2", null, "Sign in"), form([input("Email", "email", "email"), input("Password", "password", "password")], "Continue", async (f) => {
-  const { r, d } = await post("/api/admin-auth", { action: "login", email: f.elements.namedItem("email").value, password: f.elements.namedItem("password").value });
-  if (!r.ok) return d.error || "Sign-in failed."; return d.stage === "mfa" ? mfa(d.factorId) : enroll(); }, msg)); }
-async function enroll() { const { r, d } = await post("/api/admin-auth", { action: "enroll" }); if (!r.ok) return login(d.error || "Setup failed.");
-  view(el("h2", null, "Set up two-factor authentication"), el("p", "muted", "Add this secret as a TOTP account in your authenticator app, then enter the 6-digit code:"), el("code", null, d.secret), mfaForm(d.factorId)); }
-const mfaForm = (id) => form([input("6-digit code", "text", "code")], "Verify", async (f) => { const { r, d } = await post("/api/admin-auth", { action: "mfa", factorId: id, code: f.elements.namedItem("code").value.trim() }); if (!r.ok) return d.error || "Invalid code."; dash(); });
-function mfa(id) { view(el("h2", null, "Two-factor code"), mfaForm(id)); }
-
-const api = async (body) => { const { r, d } = await post("/api/admin", body); if (r.status === 401) { login("Session expired. Please sign in again."); return null; } return r.ok ? d : (alert(T(d.error || "Error")), null); };
-let tab = "overview", search = "";
-function dash() {
-  const bar = el("div", "row"); ["overview", "orders", "messages", "customers", "prices", "portfolio", "content"].forEach((t) => { const b = el("button", "chip", t[0].toUpperCase() + t.slice(1)); b.type = "button"; b.setAttribute("aria-pressed", t === tab); b.addEventListener("click", () => { tab = t; dash(); }); bar.append(b); });
-  const out = el("button", "btn ghost sm", "Sign out"); out.type = "button"; out.addEventListener("click", async () => { await post("/api/admin-auth", { action: "logout" }); login(); }); bar.append(out);
-  const box = el("div"); view(el("h2", null, "Dashboard"), bar, box);
-  ({ overview, customers, prices: pricesEd, portfolio: portfolioEd, content: contentEd }[tab] || ((b) => orders(b, tab === "messages")))(box);
-}
-async function overview(box) { const d = await api({ action: "overview" }); if (!d) return; const g = el("div", "cards3");
-  [["Total orders", d.total], ["Pending payment", d.counts.pending_payment || 0], ["Paid", d.counts.paid || 0], ["In progress", d.counts.in_progress || 0], ["Completed", d.counts.completed || 0], ["Unread messages", d.unread]].forEach(([k, v]) => { const c = el("div", "card"); c.append(el("small", "muted", k), el("div", "price", String(v))); g.append(c); });
-  const l = el("ul", "list"); d.recent.forEach((o) => l.append(el("li", null, `${o.order_number} · ${o.customer_name} · ${LBL[o.status]} · ${new Date(o.created_at).toLocaleString()}`))); box.append(g, el("h3", null, "Recent activity"), l); }
-async function orders(box, onlyUnread) { const d = await api({ action: "orders" }); if (!d) return;
-  const s = el("input"); s.type = "search"; s.placeholder = T("Search customer name or email"); s.value = search; s.setAttribute("aria-label", T("Search customers")); const t = el("div", "tbl"); box.append(s, t);
-  const draw = () => { search = s.value.toLowerCase(); t.replaceChildren(); d.orders.filter((o) => (!onlyUnread || o.unread) && (o.customer_name + o.customer_email).toLowerCase().includes(search)).forEach((o) => { const b = el("button", "o-choice"); b.type = "button"; b.append(el("strong", null, `${o.order_number} · ${o.customer_name}`), el("span", null, `€${o.amount_cents / 100}`), el("small", null, `${o.customer_email} · ${o.package_name} · ${LBL[o.status]} · ${o.payment_status}${o.unread ? " · " + o.unread + " unread" : ""}`)); b.addEventListener("click", () => detail(o.id)); t.append(b); }); };
-  s.addEventListener("input", draw); draw(); }
-async function detail(id) { const d = await api({ action: "order", id }); if (!d) return; const o = d.order;
-  const back = el("button", "btn ghost sm", "← Back"); back.type = "button"; back.addEventListener("click", dash);
-  const dl = el("dl", "o-sum"); [["Order", o.order_number], ["Customer", `${o.customer_name} <${o.customer_email}>`], ["Package", `${o.package_name} (€${o.amount_cents / 100})`], ["Payment", o.payment_status], ["Ordered", new Date(o.created_at).toLocaleString()], ["Video type", o.video_type], ["Length", o.video_length], ["Game", o.game], ["Subtitles", o.subtitles], ["Preferences", o.preferences || "–"], ["Instructions", o.notes]].forEach(([k, v]) => { const r = el("div"); r.append(el("dt", null, k), el("dd", null, v)); dl.append(r); });
-  const refs = el("dd"); (o.reference_links || []).forEach((u) => { if (u.startsWith("https://")) { const a = el("a", null, u); a.href = u; a.target = "_blank"; a.rel = "noopener noreferrer nofollow"; refs.append(a, el("br")); } }); if (!refs.childNodes.length) refs.textContent = "–"; const rr = el("div"); rr.append(el("dt", null, "References"), refs); dl.append(rr);
-  const sel = el("select"); Object.entries(LBL).forEach(([k, v]) => { const op = el("option", null, v); op.value = k; sel.append(op); }); sel.value = o.status;
-  const sv = el("button", "btn sm", "Save status"); sv.type = "button"; sv.addEventListener("click", async () => { if (await api({ action: "setStatus", id, status: sel.value })) detail(id); });
-  const th = el("div", "thread"); d.messages.forEach((m) => { const b = el("div", "msg " + m.sender); b.append(el("small", null, (m.sender === "admin" ? "You" : o.customer_name) + " · " + new Date(m.created_at).toLocaleString()), el("p", null, m.body)); th.append(b); });
-  const ta = el("textarea"); ta.rows = 4; ta.maxLength = 4000; ta.required = true; ta.setAttribute("aria-label", T("Reply"));
-  const rf = el("form", "o-form"); rf.append(ta, el("button", "btn", "Send reply")); rf.addEventListener("submit", async (e) => { e.preventDefault(); if (ta.value.trim() && await api({ action: "reply", id, body: ta.value })) detail(id); });
-  const sr = el("div", "row"); sr.append(sel, sv); view(back, el("h2", null, o.order_number), dl, sr, el("h3", null, "Conversation"), th, rf); }
-/* ---- customers ---- */
-async function customers(box) {
-  const d = await api({ action: "customers" }); if (!d) return; if (!d.customers.length) box.append(el("p", "muted", "No registered customers yet."));
-  d.customers.forEach((c) => { const b = el("button", "o-choice"); b.type = "button"; b.append(el("strong", null, c.name || c.email), el("span", null, c.orders + " orders"), el("small", null, `${c.email} · ${c.status} · registered ${new Date(c.created_at).toLocaleDateString()}`));
-    b.addEventListener("click", async () => { const o = await api({ action: "customerOrders", id: c.id }); if (!o) return; const back = el("button", "btn ghost sm", "← Back"); back.type = "button"; back.addEventListener("click", dash); const l = el("div", "tbl");
-      o.orders.forEach((x) => { const ob = el("button", "o-choice"); ob.type = "button"; ob.append(el("strong", null, `${x.order_number} · ${x.package_name}`), el("span", null, "€" + x.amount_cents / 100), el("small", null, `${LBL[x.status]} · ${x.payment_status} · ${new Date(x.created_at).toLocaleDateString()}`)); ob.addEventListener("click", () => detail(x.id)); l.append(ob); });
-      view(back, el("h2", null, c.name || c.email), el("p", "muted", `${c.email} · account ${c.status}`), el("h3", null, "Order history"), l); }); box.append(b); });
-}
-/* ---- content editors (prices, portfolio, about, contact) ---- */
-function mediaField(k, l, kind, r) {
-  const w = el("div", "o-f media"), inp = el("input"), file = el("input"), pv = el("div", "pv"), msg = el("small", "muted"), row = el("div", "row"), up = el("button", "btn ghost sm", "Upload"), clr = el("button", "btn ghost sm", "Clear");
-  inp.type = "text"; inp.value = r[k] ?? ""; file.type = "file"; file.accept = kind === "video" ? "video/mp4,video/webm" : "image/jpeg,image/png,image/webp"; up.type = clr.type = "button"; let chosen = null;
-  const show = (src) => { pv.replaceChildren(); if (!src || !/^(https:|blob:|\/?(videos|img)\/)/.test(src)) return; const x = el(kind === "video" ? "video" : "img"); x.src = /^(https:|blob:)/.test(src) ? src : "/" + src.replace(/^\//, ""); if (kind === "video") { x.controls = true; x.preload = "metadata"; x.muted = true; x.playsInline = true; } else x.alt = ""; pv.append(x); };
-  inp.addEventListener("input", () => { r[k] = inp.value; show(inp.value); }); show(inp.value);
-  file.addEventListener("change", () => { chosen = file.files[0] || null; if (chosen) show(URL.createObjectURL(chosen)); }); // local preview before anything is uploaded
-  up.addEventListener("click", async () => {
-    if (!chosen) { msg.textContent = T("Choose a file first."); return; }
-    const g = await api({ action: "uploadUrl", kind, contentType: chosen.type, size: chosen.size }); if (!g) return;
-    const fd = new FormData(); fd.append("cacheControl", "3600"); fd.append("", chosen);
-    let ok = false; try { ok = (await fetch(g.signedUrl, { method: "PUT", headers: { "x-upsert": "false" }, body: fd })).ok; } catch {}
-    if (!ok) { msg.textContent = T("Upload failed."); return; } inp.value = r[k] = g.url; show(g.url); msg.textContent = T("Uploaded. Don't forget to save changes.");
-  });
-  clr.addEventListener("click", () => { inp.value = r[k] = ""; chosen = null; file.value = ""; show(""); });
-  row.append(up, clr); w.append(el("span", null, l), inp, file, pv, row, msg); return w;
-}
-const afield = (k, l, t, o, r) => { if (t === "media") return mediaField(k, l, o, r); const w = el("label", "o-f"); w.append(el("span", null, l)); let i;
-  if (t === "select") { i = el("select"); o.forEach((x) => { const op = el("option", null, x); op.value = x; i.append(op); }); }
-  else if (t === "lines" || t === "area") { i = el("textarea"); i.rows = t === "area" ? 9 : 4; }
-  else { i = el("input"); i.type = t === "check" ? "checkbox" : t === "number" ? "number" : "text"; if (t === "number") i.step = "0.01"; }
-  if (t === "check") i.checked = !!r[k]; else i.value = r[k] ?? "";
-  const up = () => { r[k] = t === "check" ? i.checked : i.value; }; i.addEventListener("input", up); i.addEventListener("change", up); w.append(i); return w; };
-const SAVED = "Saved. The public website updates within about 10 seconds.";
-async function editor(box, key, S, blank, toUI, fromUI) {
-  const g = await api({ action: "contentGet", key }); if (!g) return; const rows = g.value.map(toUI), list = el("div", "tbl");
-  const draw = () => { list.replaceChildren(); rows.forEach((r, i) => { const c = el("div", "card ed"), bar = el("div", "row");
-    [["↑", -1], ["↓", 1], ["Delete", 0]].forEach(([l, s]) => { const b = el("button", "btn ghost sm", l); b.type = "button"; b.addEventListener("click", () => { if (!s) { if (!confirm(T("Delete this entry?"))) return; rows.splice(i, 1); } else { const j = i + s; if (j < 0 || j >= rows.length) return; [rows[i], rows[j]] = [rows[j], rows[i]]; } draw(); }); bar.append(b); });
-    c.append(...S.map(([k, l, t, o]) => afield(k, l, t, o, r)), bar); list.append(c); }); };
-  const add = el("button", "btn ghost", "+ Add"), sv = el("button", "btn", "Save changes"), r2 = el("div", "row"); add.type = sv.type = "button";
-  add.addEventListener("click", () => { rows.push(blank()); draw(); }); sv.addEventListener("click", async () => { if (await api({ action: "contentSet", key, value: rows.map(fromUI) })) alert(T(SAVED)); });
-  r2.append(add, sv); box.append(list, r2); draw();
-}
-async function objEditor(box, key, S, toUI, fromUI) {
-  const g = await api({ action: "contentGet", key }); if (!g) return; const r = toUI(g.value), f = el("div", "o-form"), sv = el("button", "btn", "Save changes"); sv.type = "button";
-  sv.addEventListener("click", async () => { if (await api({ action: "contentSet", key, value: fromUI(r) })) alert(T(SAVED)); }); f.append(...S.map(([k, l, t, o]) => afield(k, l, t, o, r)), sv); box.append(f);
-}
-const lines = (s) => String(s || "").split("\n").map((x) => x.trim()).filter(Boolean);
-function pricesEd(box) { box.append(el("p", "muted", "Prices are charged exactly as saved here (server-side). Disable a package to hide it.")); editor(box, "packages", [["name", "Name", "text"], ["name_de", "Name (German)", "text"], ["price", "Price (EUR)", "number"], ["service", "Service", "select", ["short", "long"]], ["items", "Included items (one per line)", "lines"], ["items_de", "Included items, German (one per line)", "lines"], ["hot", "Highlight as popular", "check"], ["active", "Active (visible and orderable)", "check"], ["id", "ID (lowercase letters, digits, dashes; keep for existing packages)", "text"]],
-  () => ({ id: "pkg-" + Date.now().toString(36), name: "", name_de: "", items_de: "", price: 10, service: "short", items: "", hot: false, active: true }), (p) => ({ ...p, items: p.items.join("\n"), items_de: (p.items_de || []).join("\n"), name_de: p.name_de || "" }), (p) => ({ id: p.id.trim(), service: p.service, name: p.name, name_de: p.name_de || "", price: Number(p.price), items: lines(p.items), items_de: lines(p.items_de), hot: !!p.hot, active: !!p.active })); }
-const parseSrc = (s) => { s = (s || "").trim(); const m = s.match(/(?:youtu\.be\/|shorts\/|[?&]v=|embed\/)([\w-]{11})/) || (/^[\w-]{11}$/.test(s) ? [0, s] : null); return m ? { youtubeId: m[1], file: "" } : (/^\/?videos\//.test(s) || /\/storage\/v1\/object\/public\/media\/videos\//.test(s)) ? { youtubeId: "", file: s } : { youtubeId: "", file: "" }; };
-function portfolioEd(box) {
-  box.append(el("p", "muted", "Entries appear in this order on the website. Video: YouTube link/ID or upload a file (MP4/WebM, max. 50 MB). Thumbnail: upload JPG/PNG/WebP (max. 5 MB). Choose a file to preview it, then upload."));
-  const cl = el("button", "btn ghost sm", "Delete unused files"); cl.type = "button"; cl.addEventListener("click", async () => { if (!confirm(T("Delete uploaded files that no saved portfolio entry uses? Save your changes first."))) return; const r = await api({ action: "mediaCleanup" }); if (r) alert(T("Deleted files: " + r.deleted)); }); box.append(cl);
-  editor(box, "projects", [["title", "Title", "text"], ["title_de", "Title (German, optional)", "text"], ["cat", "Category", "select", ["Valorant", "Minecraft", "Other"]], ["type", "Format", "select", ["Short", "Video"]], ["dur", "Duration (optional, e.g. 0:45)", "text"], ["src", "Video (YouTube link/ID, or upload)", "media", "video"], ["thumb", "Thumbnail (optional)", "media", "thumb"]],
-    () => ({ title: "", title_de: "", cat: "Valorant", type: "Short", dur: "", src: "", thumb: "" }), (p) => ({ ...p, title_de: p.title_de || "", src: p.youtubeId || p.file }), (p) => ({ title: p.title, title_de: p.title_de || "", cat: p.cat, type: p.type, dur: p.dur || "", thumb: p.thumb || "", ...parseSrc(p.src) }));
-}
-function contentEd(box) {
-  const a = el("div"), c = el("div"); box.append(el("h3", null, "About section"), a, el("h3", null, "Contact information"), c);
-  objEditor(a, "about", [["heading", "Heading", "text"], ["heading_de", "Heading (German)", "text"], ["paragraphs", "Text (separate paragraphs with a blank line)", "area"], ["paragraphs_de", "Text, German (blank line between paragraphs)", "area"], ["name", "Name", "text"], ["age", "Age", "text"], ["since", "Editing since", "text"], ["languages", "Languages", "text"], ["languages_de", "Languages (German)", "text"]],
-    (v) => ({ heading: v.heading, heading_de: v.heading_de || "", paragraphs: v.paragraphs.join("\\n\\n"), paragraphs_de: (v.paragraphs_de || []).join("\\n\\n"), ...v.facts, languages_de: v.facts.languages_de || "" }),
-    (r) => ({ heading: r.heading, heading_de: r.heading_de || "", paragraphs: pars(r.paragraphs), paragraphs_de: pars(r.paragraphs_de), facts: { name: r.name, age: r.age, since: r.since, languages: r.languages, languages_de: r.languages_de || "" } }));
-  objEditor(c, "contact", [["email", "Email address (shown on the website)", "text"], ["discord", "Discord username", "text"], ["youtube", "YouTube URL (https://, optional)", "text"], ["tiktok", "TikTok URL (https://, optional)", "text"]], (v) => v, (r) => ({ email: r.email, discord: r.discord, youtube: r.youtube || "", tiktok: r.tiktok || "" }));
-}
-const pars = (s) => String(s || "").split(/\\n\\s*\\n/).map((x) => x.trim()).filter(Boolean);
-const lg = $("#lang"); lg.textContent = I18N.lang === "de" ? "EN" : "DE"; lg.addEventListener("click", () => I18N.set(I18N.lang === "de" ? "en" : "de"));
-login(); I18N.apply(document.body);
+const crypto = require("crypto"), { db, limited, ip, send, originOk, mail, wrap } = require("./_lib"), { adminUser } = require("./_admin"), { V, getContent } = require("./_content");
+const STATUS = ["pending_payment", "paid", "confirmed", "in_progress", "waiting_for_customer", "completed", "cancelled"], UUID = /^[0-9a-f-]{36}$/;
+const LIST = "id,order_number,status,payment_status,customer_name,customer_email,package_name,amount_cents,created_at";
+const FULL = LIST + ",service,video_type,video_length,game,reference_links,preferences,subtitles,notes,paid_at";
+module.exports = wrap("admin", async (req, res) => {
+  const e = process.env;
+  if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
+  if (!e.SUPABASE_URL || !e.SUPABASE_SERVICE_ROLE_KEY || !e.ADMIN_EMAIL) return send(res, 503, { error: "Admin is not configured." });
+  if (!originOk(req) || !/^application\/json/.test(req.headers["content-type"] || "")) return send(res, 403, { error: "Forbidden" });
+  if (limited("adm" + ip(req), 200, 600000)) return send(res, 429, { error: "Too many requests" });
+  if (!(await adminUser(req))) return send(res, 401, { error: "Unauthorized" }); // checked on EVERY call
+  const b = req.body || {}, d = db(), id = b.id;
+  if (["order", "setStatus", "reply"].includes(b.action) && !UUID.test(String(id))) return send(res, 400, { error: "Invalid id" });
+  if (b.action === "overview") {
+    const { data: o } = await d.from("orders").select("id,order_number,status,customer_name,created_at").order("created_at", { ascending: false }).limit(1000);
+    const { count } = await d.from("messages").select("id", { count: "exact", head: true }).eq("sender", "customer").eq("read_by_admin", false);
+    const counts = {}; (o || []).forEach((x) => { counts[x.status] = (counts[x.status] || 0) + 1; });
+    return send(res, 200, { total: (o || []).length, counts, unread: count || 0, recent: (o || []).slice(0, 8) });
+  }
+  if (b.action === "orders") {
+    const { data: o } = await d.from("orders").select(LIST).order("created_at", { ascending: false }).limit(500);
+    const { data: m } = await d.from("messages").select("order_id").eq("sender", "customer").eq("read_by_admin", false), un = {};
+    (m || []).forEach((x) => { un[x.order_id] = (un[x.order_id] || 0) + 1; });
+    return send(res, 200, { orders: (o || []).map((x) => ({ ...x, unread: un[x.id] || 0 })) });
+  }
+  const MEDIA = { video: { dir: "videos", mime: { "video/mp4": "mp4", "video/webm": "webm" }, max: 52428800 }, thumb: { dir: "thumbs", mime: { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }, max: 5242880 } };
+  if (b.action === "uploadUrl") { // one-time signed upload URL; the file name is chosen by the server, never by the client
+    const m = MEDIA[b.kind], ext = m && m.mime[b.contentType];
+    if (!ext) return send(res, 400, { error: "File type not allowed." });
+    if (!Number.isInteger(b.size) || b.size < 1 || b.size > m.max) return send(res, 400, { error: "File too large or empty." });
+    if (limited("up" + ip(req), 20, 600000)) return send(res, 429, { error: "Too many requests" });
+    const path = `${m.dir}/${crypto.randomUUID()}.${ext}`, { data, error } = await d.storage.from("media").createSignedUploadUrl(path);
+    if (error || !data) return send(res, 500, { error: "Could not prepare the upload." });
+    return send(res, 200, { signedUrl: data.signedUrl, url: d.storage.from("media").getPublicUrl(path).data.publicUrl });
+  }
+  if (b.action === "mediaCleanup") { // deletes uploaded files that no saved portfolio entry uses any more
+    const cur = (await getContent("projects")) || [], used = new Set(cur.flatMap((x) => [x.file, x.thumb]).map((u) => String(u).split("/media/")[1]).filter(Boolean)); let n = 0;
+    for (const dir of ["videos", "thumbs"]) { const { data } = await d.storage.from("media").list(dir, { limit: 1000 }), rm = (data || []).map((f) => dir + "/" + f.name).filter((p) => !used.has(p) && /^(videos|thumbs)\/[0-9a-f-]{36}\.\w+$/.test(p)); if (rm.length) { await d.storage.from("media").remove(rm); n += rm.length; } }
+    return send(res, 200, { deleted: n });
+  }
+  if (b.action === "customers") {
+    const { data: u } = await d.auth.admin.listUsers({ page: 1, perPage: 200 }), { data: o } = await d.from("orders").select("user_id").not("user_id", "is", null), n = {}, ae = e.ADMIN_EMAIL.toLowerCase();
+    (o || []).forEach((x) => { n[x.user_id] = (n[x.user_id] || 0) + 1; });
+    return send(res, 200, { customers: ((u && u.users) || []).filter((x) => (x.email || "").toLowerCase() !== ae).map((x) => ({ id: x.id, email: x.email, name: (x.user_metadata && x.user_metadata.name) || "", created_at: x.created_at, orders: n[x.id] || 0, status: x.banned_until ? "disabled" : x.email_confirmed_at ? "verified" : "unverified" })) });
+  }
+  if (b.action === "customerOrders") { if (!UUID.test(String(id))) return send(res, 400, { error: "Invalid id" }); const { data } = await d.from("orders").select(LIST).eq("user_id", id).order("created_at", { ascending: false }); return send(res, 200, { orders: data || [] }); }
+  if (b.action === "contentGet") { if (!V[b.key]) return send(res, 400, { error: "Unknown key" }); return send(res, 200, { value: await getContent(b.key) }); }
+  if (b.action === "contentSet") {
+    const val = V[b.key] ? V[b.key](b.value) : null; if (val == null) return send(res, 400, { error: "Invalid data. Please check all fields." });
+    const { error } = await d.from("site_content").upsert({ key: b.key, value: val, updated_at: new Date().toISOString() }); return error ? send(res, 500, { error: "Save failed" }) : send(res, 200, { ok: true });
+  }
+  const { data: ord } = UUID.test(String(id)) ? await d.from("orders").select(FULL).eq("id", id).maybeSingle() : { data: null };
+  if (!ord) return send(res, 404, { error: "Not found" });
+  if (b.action === "order") {
+    await d.from("messages").update({ read_by_admin: true }).eq("order_id", id).eq("sender", "customer").eq("read_by_admin", false);
+    const { data: m } = await d.from("messages").select("id,sender,body,created_at").eq("order_id", id).order("created_at");
+    return send(res, 200, { order: ord, messages: m || [] });
+  }
+  if (b.action === "setStatus") {
+    if (!STATUS.includes(b.status)) return send(res, 400, { error: "Invalid status" });
+    if (!["cancelled", "pending_payment"].includes(b.status) && ord.payment_status !== "paid") return send(res, 400, { error: "Order is not paid (verified by Stripe)." });
+    const { error } = await d.from("orders").update({ status: b.status }).eq("id", id);
+    if (error) return send(res, 500, { error: "Update failed" });
+    await mail(ord.customer_email, `Order ${ord.order_number}: status updated`, `The status of your order ${ord.order_number} changed to: ${b.status.replaceAll("_", " ")}. Details: ${e.SITE_URL}/account.html`);
+    return send(res, 200, { ok: true });
+  }
+  if (b.action === "reply") {
+    if (typeof b.body !== "string" || b.body.trim().length < 1 || b.body.length > 4000) return send(res, 400, { error: "Invalid message" });
+    const { error } = await d.from("messages").insert({ order_id: id, sender: "admin", body: b.body.trim(), read_by_admin: true });
+    if (error) return send(res, 500, { error: "Could not send" });
+    await mail(ord.customer_email, `New reply on order ${ord.order_number}`, `You have a new message from Pegasus2912 on order ${ord.order_number}. Please open your order page using the link you saved after payment.`);
+    return send(res, 200, { ok: true });
+  }
+  return send(res, 400, { error: "Unknown action" });
+});
