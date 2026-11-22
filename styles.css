@@ -170,3 +170,33 @@ h1,h2{font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;f
 
 /* hero fallback if the image file is ever missing: branded panel instead of an empty box */
 .art-wrap.noimg{display:grid;place-items:center;background:linear-gradient(160deg,#241f33,#17161f)}.art-wrap.noimg:after{content:"Pegasus2912";font-family:ui-serif,Georgia,serif;font-size:clamp(1.6rem,4vw,2.6rem);font-weight:600;color:var(--b);letter-spacing:-.01em}
+
+/* ===== Hero illustration: scissors cut a film strip above an editing timeline (CSS only, transform/opacity animations, 6 s loop) ===== */
+.art-frame{position:relative;max-width:440px;margin-left:auto;animation:up 1s .4s both}
+.hero-svg{display:block;width:100%;height:auto;aspect-ratio:1;border-radius:18px;border:1px solid var(--line);overflow:hidden;background:#15141c}
+.anim-toggle{position:absolute;right:10px;bottom:10px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:rgba(20,19,26,.75);color:var(--mu);font-size:.7rem;cursor:pointer;display:grid;place-items:center;transition:color .2s,border-color .2s}.anim-toggle:hover{color:#fff;border-color:rgba(255,255,255,.3)}
+/* resting pose (also shown with reduced motion): scissors above the strip, blades half open, playhead mid-way */
+.a1,.a2{transform-origin:0 0}.a1{transform:rotate(9deg)}.a2{transform:rotate(-9deg)}.ph{transform:translateX(170px)}
+.cutline,.sp{opacity:0}.glow1,.glow2{opacity:.8}.fl{opacity:0}.wave rect{transform-box:fill-box;transform-origin:center}
+.hl,.hr{transform-origin:312px 164px}
+.sc-move{animation:scMove 6s ease-in-out infinite}.a1{animation:a1 6s ease-in-out infinite}.a2{animation:a2 6s ease-in-out infinite}
+.hl{animation:hl 6s ease-in-out infinite}.hr{animation:hr 6s ease-in-out infinite}.film{animation:film 24s linear infinite}
+.cutline{animation:flash 6s ease-out infinite}.sp{animation:spark 6s ease-out infinite}.ph{animation:ph 6s linear infinite}
+.wave rect{animation:wf 1.6s ease-in-out infinite alternate}.wave rect:nth-child(4n+2){animation-delay:-.4s}.wave rect:nth-child(4n+3){animation-delay:-.8s}.wave rect:nth-child(4n){animation-delay:-1.2s}
+.glow1{animation:breathe 7s ease-in-out infinite alternate}.glow2{animation:breathe 7s ease-in-out -3.5s infinite alternate}.fl{animation:floaty 9s ease-in-out infinite}.fl2{animation-delay:-2s}.fl3{animation-delay:-4s}.fl4{animation-delay:-6s}.fl5{animation-delay:-8s}
+.sp1{--dx:-30px;--dy:-22px}.sp2{--dx:30px;--dy:-26px}.sp3{--dx:-36px;--dy:6px}.sp4{--dx:36px;--dy:10px}.sp5{--dx:-18px;--dy:30px}.sp6{--dx:20px;--dy:32px}
+@keyframes scMove{0%{transform:translateX(190px)}12%,44%{transform:translateX(0)}58%,100%{transform:translateX(190px)}}
+@keyframes a1{0%,12%{transform:rotate(2deg)}25%,31%{transform:rotate(16deg)}34%,44%{transform:rotate(1deg)}56%{transform:rotate(9deg)}100%{transform:rotate(2deg)}}
+@keyframes a2{0%,12%{transform:rotate(-2deg)}25%,31%{transform:rotate(-16deg)}34%,44%{transform:rotate(-1deg)}56%{transform:rotate(-9deg)}100%{transform:rotate(-2deg)}}
+@keyframes hl{0%,33%{transform:none}37%,58%{transform:translateX(-7px)}72%,100%{transform:none}}
+@keyframes hr{0%,33%{transform:none}37%,58%{transform:translate(8px,4px) rotate(1.4deg)}72%,100%{transform:none}}
+@keyframes film{to{transform:translateX(-352px)}}
+@keyframes flash{0%,29%{opacity:0}33%{opacity:1}46%,100%{opacity:0}}
+@keyframes spark{0%,32%{opacity:0;transform:translate(0,0)}35%{opacity:1}46%,100%{opacity:0;transform:translate(var(--dx),var(--dy))}}
+@keyframes ph{0%{transform:translateX(0);opacity:0}4%,96%{opacity:1}100%{transform:translateX(436px);opacity:0}}
+@keyframes wf{from{transform:scaleY(.45)}to{transform:scaleY(1)}}
+@keyframes breathe{from{opacity:.55}to{opacity:1}}
+@keyframes floaty{0%{transform:translateY(0);opacity:0}25%{opacity:.8}100%{transform:translateY(-55px);opacity:0}}
+.hero-svg.paused *,.hero-svg.off *{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){.hero-svg *,.art-frame{animation:none!important}}
+@media(max-width:900px){.art-frame{margin:0 auto}}

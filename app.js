@@ -274,11 +274,13 @@ document.addEventListener("keydown", (e) => {
     if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
 });
 
-/* Hero artwork: if the file is missing/broken, show a neutral panel instead of alt text */
+/* Hero illustration: pause/play button (WCAG 2.2.2) and automatic pause while off-screen */
 (function () {
-  const a = $(".art"); if (!a) return;
-  const fail = () => { console.warn("Hero image failed to load: /img/pegasus.jpg (is the img/ folder deployed?)"); a.closest(".art-wrap").classList.add("noimg"); a.remove(); };
-  a.addEventListener("error", fail); if (a.complete && a.naturalWidth === 0) fail();
+  const svg = $("#hero-svg"), b = $("#anim-toggle"); if (!svg || !b) return;
+  const set = (p) => { svg.classList.toggle("paused", p); b.setAttribute("aria-pressed", String(p)); b.setAttribute("aria-label", T(p ? "Play animation" : "Pause animation")); b.firstChild.textContent = p ? "▶" : "❚❚"; };
+  b.addEventListener("click", () => set(!svg.classList.contains("paused")));
+  if ("IntersectionObserver" in window) new IntersectionObserver((e) => svg.classList.toggle("off", !e[0].isIntersecting)).observe(svg);
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) b.hidden = true;
 })();
 
 /* About section from admin content */

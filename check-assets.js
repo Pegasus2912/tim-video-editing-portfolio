@@ -1,6 +1,6 @@
 // Run: npm run check   (before every push): verifies that every file the site needs exists, INCLUDING the api/ folder that makes registration, login, Stripe and /api/health work.
 const fs = require("fs"), path = require("path"), root = path.join(__dirname, "..");
-const REQUIRED = ["index.html", "vercel.json", "package.json", "package-lock.json", "404.html", "account.html", "admin.html",
+const REQUIRED = ["index.html", "vercel.json", "package.json", "package-lock.json", "404.html", "account.html", "admin.html", "deploy-check.html", "deploy-check.js", "i18n.js", "app.js", "styles.css",
   ...["_lib", "_user", "_admin", "_content", "_defaults", "health", "account", "admin-auth", "admin", "checkout", "content", "messages", "order-status", "stripe-webhook"].map((n) => `api/${n}.js`)];
 let bad = 0;
 for (const r of REQUIRED) if (!fs.existsSync(path.join(root, r))) { console.log("MISSING (required):", r); bad++; }
