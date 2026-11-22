@@ -82,3 +82,18 @@ Environment values are trimmed automatically (spaces, quotes, newlines, trailing
 6. Run `npm run check` locally before pushing (reports missing `api/` files), and after deploying `npm run verify -- https://YOUR-DOMAIN`: it calls every API route and prints "api/ folder is NOT deployed" if any answers with the 404 page. `npm run dev` starts a local test server with the same routes.
 7. Open `https://YOUR-DOMAIN/api/health`: it must show JSON like `{"ok":false,"problems":[...]}`. Fix the listed codes (section 10) until it shows `"ok":true`.
 Also note: `/SETUP.md`, `/supabase/*` and `/scripts/*` are redirected to the home page so internal files are not publicly readable.
+
+### 11a. If GitHub shows only loose files and no folders (diagnosed from a real repo screenshot)
+A GitHub repo page lists **folders first**. This project must show five folders at the top: `api`, `img`, `scripts`, `supabase`, `videos`, followed by the files. If the list starts directly with `.env.example`, no folder was uploaded. That one problem causes all of these symptoms:
+| What you see | Missing |
+|---|---|
+| `/api/health` shows Vercel's NOT_FOUND page; registration/login show a generic error | `api/` |
+| Hero image area is empty (dark box with the name) | `img/` |
+| Discord video: "Video konnte nicht geladen werden ... videos/discord-bot-ad.mp4"; dark thumbnail | `videos/` (and `img/`) |
+**Upload the folders (pick one):**
+1. *GitHub website:* unzip the project, open the unzipped folder, press Ctrl+A (this selects folders too) and drag everything onto Add file -> Upload files. The file-picker button cannot select folders. Before you commit, the list must show paths such as `api/health.js` and `img/pegasus.jpg`. Commit.
+2. *One folder at a time:* Add file -> Upload files, drag only the folder `api`, commit; repeat for `img`, `videos`, `supabase`, `scripts`.
+3. *GitHub Desktop (most reliable):* clone the repository, copy the unzipped files INCLUDING the folders into it, Commit, Push.
+4. *Without GitHub:* in the unzipped folder run `npx vercel --prod`.
+Vercel redeploys automatically after each commit. Then check: `https://YOUR-DOMAIN/api/health` (JSON), `https://YOUR-DOMAIN/img/pegasus.jpg` (picture), `https://YOUR-DOMAIN/videos/discord-bot-ad.mp4` (plays). Parameters like `?utm_source=...` in a link are only tracking tags and make no difference. A leftover `favicon.svg` in the repo is harmless and can be deleted.
+(A build-time guard that fails the deployment when folders are missing was tested and rejected: with Vercel's "Other" preset it would break the working build.)
